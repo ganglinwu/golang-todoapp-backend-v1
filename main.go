@@ -11,7 +11,7 @@ import (
 func main() {
 	store := &inmemorystore.InMemoryStore{Store: map[string]string{}}
 
-	handler := &server.TodoServer{TodoStore: store}
+	handler := server.NewTodoServer(store)
 
 	log.Fatal(http.ListenAndServe(":8080", handler))
 }

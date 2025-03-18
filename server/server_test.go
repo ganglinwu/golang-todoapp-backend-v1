@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/ganglinwu/todoapp-backend-v1/errs"
@@ -22,13 +23,23 @@ func (s *StubTodoStore) GetTodoByID(ID string) (models.TODO, error) {
 	return models.TODO{}, errs.ErrNotFound
 }
 
+func (s *StubTodoStore) CreateTodoByID(ID, description string) error {
+	_, exist := s.store[ID]
+	if exist {
+		return errs.ErrIdAlreadyInUse
+	} else {
+		s.store[ID] = description
+		return nil
+	}
+}
+
 func TestGetTodoByID(t *testing.T) {
 	store := map[string]string{
 		"1": "Hello there!",
 		"2": "Water plants",
 	}
 
-	s := &TodoServer{&StubTodoStore{store}}
+	s := NewTodoServer(&StubTodoStore{store})
 
 	getTests := []struct {
 		testname   string
@@ -47,6 +58,35 @@ func TestGetTodoByID(t *testing.T) {
 			response := httptest.NewRecorder()
 
 			s.ServeHTTP(response, request)
+
+			got := response.Body.String()
+
+			assertTodoText(t, got, test.want)
+			assertStatusCode(t, response.Code, test.statusCode)
+		})
+	}
+}
+
+func TestPostNewTodoByID(t *testing.T) {
+	store := map[string]string{
+		"1": "Hello there!",
+		"2": "Water plants",
+	}
+
+	s := NewTodoServer(&StubTodoStore{store})
+
+	t.Run("post new todo on id 3", func(t *testing.T) {
+		reader := strings.NewReader("Description=Save the earth")
+
+		request, _ := http.NewRequest(http.MethodPost, "/todo/3", reader)
+		response := httptest.NewRecorder()
+
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		s.ServeHTTP(response, request)
+
+		got := response.Body.String()
+		want := "Sucessfully created todo ID 3: Save the earth"
 
 			got := response.Body.String()
 

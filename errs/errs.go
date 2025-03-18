@@ -1,7 +1,8 @@
 package errs
 
 const (
-	ErrNotFound = TodoErr("cannot find todo user that user has specified")
+	ErrNotFound       = TodoErr("cannot find todo user that user has specified")
+	ErrIdAlreadyInUse = TodoErr("unexpected error: ID is already in use. to prevent unintentional overwrite, we have blocked this request")
 )
 
 type TodoErr string

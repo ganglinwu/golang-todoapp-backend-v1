@@ -17,3 +17,13 @@ func (i *InMemoryStore) GetTodoByID(ID string) (models.TODO, error) {
 	}
 	return models.TODO{}, errs.ErrNotFound
 }
+
+func (i *InMemoryStore) CreateTodoByID(ID, description string) error {
+	_, exists := i.Store[ID]
+	if exists {
+		return errs.ErrIdAlreadyInUse
+	} else {
+		i.Store[ID] = description
+		return nil
+	}
+}
