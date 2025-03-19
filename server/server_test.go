@@ -1,8 +1,10 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -31,6 +33,18 @@ func (s *StubTodoStore) CreateTodoByID(ID, description string) error {
 		s.store[ID] = description
 		return nil
 	}
+}
+
+func (s *StubTodoStore) GetAllTodos() ([]models.TODO, error) {
+	todos := []models.TODO{}
+	if len(s.store) == 0 {
+		return nil, errs.ErrNotFound
+	}
+	for key, value := range s.store {
+		todo := models.TODO{ID: key, Description: value}
+		todos = append(todos, todo)
+	}
+	return todos, nil
 }
 
 func TestGetTodoByID(t *testing.T) {
@@ -64,6 +78,36 @@ func TestGetTodoByID(t *testing.T) {
 			assertTodoText(t, got, test.want)
 			assertStatusCode(t, response.Code, test.statusCode)
 		})
+	}
+}
+
+func TestGetAllTodo(t *testing.T) {
+	store := map[string]string{
+		"1": "Hello there!",
+		"2": "Water plants",
+	}
+
+	s := NewTodoServer(&StubTodoStore{store})
+
+	request, _ := http.NewRequest(http.MethodGet, "/todo", nil)
+	response := httptest.NewRecorder()
+
+	s.ServeHTTP(response, request)
+
+	var marshaledResponse []models.TODO
+	err := json.NewDecoder(response.Body).Decode(&marshaledResponse)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []models.TODO{
+		{
+			ID:          "1",
+			Description: "Hello there!",
+		},
+		{ID: "2", Description: "Water plants"},
+	}
+	if !reflect.DeepEqual(marshaledResponse, want) {
+		t.Errorf("got %#v, want %#v", marshaledResponse, want)
 	}
 }
 

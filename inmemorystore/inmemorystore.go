@@ -27,3 +27,15 @@ func (i *InMemoryStore) CreateTodoByID(ID, description string) error {
 		return nil
 	}
 }
+
+func (i *InMemoryStore) GetAllTodos() ([]models.TODO, error) {
+	todos := []models.TODO{}
+	if len(i.Store) == 0 {
+		return nil, errs.ErrNotFound
+	}
+	for key, value := range i.Store {
+		todo := models.TODO{ID: key, Description: value}
+		todos = append(todos, todo)
+	}
+	return todos, nil
+}
