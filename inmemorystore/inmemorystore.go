@@ -39,3 +39,16 @@ func (i *InMemoryStore) GetAllTodos() ([]models.TODO, error) {
 	}
 	return todos, nil
 }
+
+func (i *InMemoryStore) DeleteTodoByID(ID string) error {
+	if len(i.Store) == 0 {
+		return errs.ErrNotFound
+	}
+	for key := range i.Store {
+		if key == ID {
+			delete(i.Store, key)
+			return nil
+		}
+	}
+	return errs.ErrNotFound
+}

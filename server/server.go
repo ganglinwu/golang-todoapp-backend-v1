@@ -17,6 +17,7 @@ type TodoStore interface {
 	GetTodoByID(ID string) (models.TODO, error)
 	CreateTodoByID(ID, description string) error
 	GetAllTodos() ([]models.TODO, error)
+	DeleteTodoByID(ID string) error
 }
 
 type TodoServer struct {
@@ -33,6 +34,7 @@ func NewTodoServer(store TodoStore) *TodoServer {
 	r.HandleFunc("GET /todo", ts.handleGetAllTodos)
 	r.HandleFunc("GET /todo/{ID}", ts.handleGetTodoByID)
 	r.HandleFunc("POST /todo/{ID}", ts.handlePostTodoByID)
+	r.HandleFunc("DELETE /todo/{ID}", ts.handleDeleteTodoByID)
 
 	return ts
 }
@@ -107,5 +109,26 @@ func (ts TodoServer) handlePostTodoByID(w http.ResponseWriter, r *http.Request) 
 
 		w.WriteHeader(http.StatusCreated)
 		fmt.Fprintf(w, "Sucessfully created todo ID %s: %s", ID, description)
+	}
+}
+
+func (ts TodoServer) handleDeleteTodoByID(w http.ResponseWriter, r *http.Request) {
+	ID := r.PathValue("ID")
+	todo, err := ts.TodoStore.GetTodoByID(ID)
+	switch err {
+	case errs.ErrNotFound:
+		w.WriteHeader(http.StatusBadRequest)
+	case nil:
+		err = ts.TodoStore.DeleteTodoByID(ID)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err.Error())
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "Sucessfully deleted todo ID %s: %s", ID, todo.Description)
+	default:
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "something went wrong on our end. err: %s", err.Error())
 	}
 }

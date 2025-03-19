@@ -47,6 +47,19 @@ func (s *StubTodoStore) GetAllTodos() ([]models.TODO, error) {
 	return todos, nil
 }
 
+func (s *StubTodoStore) DeleteTodoByID(ID string) error {
+	if len(s.store) == 0 {
+		return errs.ErrNotFound
+	}
+	for key := range s.store {
+		if key == ID {
+			delete(s.store, key)
+			return nil
+		}
+	}
+	return errs.ErrNotFound
+}
+
 func TestGetTodoByID(t *testing.T) {
 	store := map[string]string{
 		"1": "Hello there!",
@@ -131,6 +144,40 @@ func TestPostNewTodoByID(t *testing.T) {
 
 		got := response.Body.String()
 		want := "Sucessfully created todo ID 3: Save the earth"
+
+			got := response.Body.String()
+
+			assertTodoText(t, got, test.want)
+			assertStatusCode(t, response.Code, test.statusCode)
+		})
+	}
+}
+
+func TestDeleteTodoByID(t *testing.T) {
+	store := map[string]string{
+		"1": "Hello there!",
+		"2": "Water plants",
+	}
+
+	s := NewTodoServer(&StubTodoStore{store})
+
+	deleteTests := []struct {
+		testname   string
+		testpath   string
+		want       string
+		statusCode int
+	}{
+		{"delete todo ID 1", "/todo/1", "Sucessfully deleted todo ID 1: Hello there!", http.StatusOK},
+		{"delete todo ID 2", "/todo/2", "Sucessfully deleted todo ID 2: Water plants", http.StatusOK},
+		{"delete non-existent todo ID 3", "/todo/3", "", http.StatusBadRequest},
+	}
+
+	for _, test := range deleteTests {
+		t.Run(test.testname, func(t *testing.T) {
+			request, _ := http.NewRequest(http.MethodDelete, test.testpath, nil)
+			response := httptest.NewRecorder()
+
+			s.ServeHTTP(response, request)
 
 			got := response.Body.String()
 
