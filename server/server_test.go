@@ -47,6 +47,19 @@ func (s *StubTodoStore) GetAllTodos() ([]models.TODO, error) {
 	return todos, nil
 }
 
+func (s *StubTodoStore) UpdateTodoByID(ID, description string) (models.TODO, error) {
+	if len(s.store) == 0 {
+		return models.TODO{}, errs.ErrNotFound
+	}
+	for key := range s.store {
+		if key == ID {
+			s.store[key] = description
+			return models.TODO{ID: key, Description: description}, nil
+		}
+	}
+	return models.TODO{}, errs.ErrNotFound
+}
+
 func (s *StubTodoStore) DeleteTodoByID(ID string) error {
 	if len(s.store) == 0 {
 		return errs.ErrNotFound
@@ -148,6 +161,52 @@ func TestPostNewTodoByID(t *testing.T) {
 			got := response.Body.String()
 
 			assertTodoText(t, got, test.want)
+			assertStatusCode(t, response.Code, test.statusCode)
+		})
+	}
+}
+
+func TestUpdateTodoByID(t *testing.T) {
+	store := map[string]string{
+		"1": "Hello there!",
+		"2": "Water plants",
+	}
+
+	s := NewTodoServer(&StubTodoStore{store})
+
+	updateTests := []struct {
+		testname            string
+		testpath            string
+		descriptionToUpdate string
+		want                models.TODO
+		statusCode          int
+	}{
+		{"update todo ID 1", "/todo/1", "Hello too!", models.TODO{ID: "1", Description: "Hello too!"}, http.StatusOK},
+		{"update todo ID 2", "/todo/2", "Pluck weeds", models.TODO{ID: "2", Description: "Pluck weeds"}, http.StatusOK},
+		{"update non-existent todo ID 3", "/todo/3", "test update description", models.TODO{}, http.StatusBadRequest},
+	}
+
+	for _, test := range updateTests {
+		t.Run(test.testname, func(t *testing.T) {
+			reader := strings.NewReader(test.descriptionToUpdate)
+
+			request, _ := http.NewRequest(http.MethodPatch, test.testpath, reader)
+			response := httptest.NewRecorder()
+
+			request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			s.ServeHTTP(response, request)
+
+			got := models.TODO{}
+
+			// blank variable used because
+			// error from decode only arise from EOF i.e. there's no Body
+			// which is the case when we try to update non-existent todo ID
+			_ = json.NewDecoder(response.Body).Decode(&got)
+
+			if !reflect.DeepEqual(got, test.want) {
+				t.Errorf("got %#v, want %#v", got, test.want)
+			}
 			assertStatusCode(t, response.Code, test.statusCode)
 		})
 	}

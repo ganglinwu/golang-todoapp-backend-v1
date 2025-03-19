@@ -17,6 +17,7 @@ type TodoStore interface {
 	GetTodoByID(ID string) (models.TODO, error)
 	CreateTodoByID(ID, description string) error
 	GetAllTodos() ([]models.TODO, error)
+	UpdateTodoByID(ID, newDescription string) (models.TODO, error)
 	DeleteTodoByID(ID string) error
 }
 
@@ -34,6 +35,7 @@ func NewTodoServer(store TodoStore) *TodoServer {
 	r.HandleFunc("GET /todo", ts.handleGetAllTodos)
 	r.HandleFunc("GET /todo/{ID}", ts.handleGetTodoByID)
 	r.HandleFunc("POST /todo/{ID}", ts.handlePostTodoByID)
+	r.HandleFunc("PATCH /todo/{ID}", ts.handleUpdateTodoByID)
 	r.HandleFunc("DELETE /todo/{ID}", ts.handleDeleteTodoByID)
 
 	return ts
@@ -109,6 +111,33 @@ func (ts TodoServer) handlePostTodoByID(w http.ResponseWriter, r *http.Request) 
 
 		w.WriteHeader(http.StatusCreated)
 		fmt.Fprintf(w, "Sucessfully created todo ID %s: %s", ID, description)
+	}
+}
+
+func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request) {
+	ID := r.PathValue("ID")
+	_, err := ts.TodoStore.GetTodoByID(ID)
+	switch err {
+	case errs.ErrNotFound:
+		w.WriteHeader(http.StatusBadRequest)
+	case nil:
+		read, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		newDescription := string(read)
+		todo, err := ts.TodoStore.UpdateTodoByID(ID, newDescription)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		err = json.NewEncoder(w).Encode(todo)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
