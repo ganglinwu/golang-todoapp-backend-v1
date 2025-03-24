@@ -24,8 +24,7 @@ type TestSuite struct {
 	server     *MockTodoServer
 }
 
-// start test suite
-func TestIntTestSuite(t *testing.T) {
+func TestMongoTestSuite(t *testing.T) {
 	suite.Run(t, &TestSuite{})
 }
 
@@ -79,10 +78,6 @@ func (ts *TestSuite) SetupTest() {
 
 // This runs after EVERY test
 func (ts *TestSuite) TearDownTest() {
-}
-
-func TestMongoTestSuite(t *testing.T) {
-	suite.Run(t, &TestSuite{})
 }
 
 func (ts *TestSuite) TestGetTodoByID() {
