@@ -133,3 +133,15 @@ func (ts *TestSuite) TestCreateTodo() {
 
 	ts.compareTodoStructFields(got, want)
 }
+
+func (ts *TestSuite) TestDeleteTodoByID() {
+	ID := "67bc5c4f1e8db0c9a17efca0"
+	dr, err := ts.server.store.DeleteTodoByID(ID)
+	if err != nil {
+		ts.FailNowf("err on DeleteTodoByID: ", err.Error())
+	}
+	got := dr.DeletedCount
+	want := int64(1)
+
+	ts.Equal(got, want)
+}

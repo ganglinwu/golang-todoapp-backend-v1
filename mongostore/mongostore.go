@@ -117,6 +117,26 @@ func (ms *MongoStore) CreateTodo(Name, Description string, DueDate time.Time) (b
 	return objID, nil
 }
 
+func (ms *MongoStore) DeleteTodoByID(ID string) (*mongo.DeleteResult, error) {
+	_, err := ms.GetTodoByID(ID)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	objID, err := bson.ObjectIDFromHex(ID)
+	if err != nil {
+		return nil, err
+	}
+
+	dr, err := ms.Collection.DeleteOne(ctx, bson.D{{Key: "_id", Value: objID}})
+	if err != nil {
+		return nil, err
+	}
+	return dr, nil
+}
+
 /*
 
 
@@ -133,16 +153,4 @@ func (ms *MongoStore) UpdateTodoByID(ID, description string) (models.TODO, error
 	return models.TODO{}, errs.ErrNotFound
 }
 
-func (ms *MongoStore) DeleteTodoByID(ID string) error {
-	if len(i.Store) == 0 {
-		return errs.ErrNotFound
-	}
-	for key := range i.Store {
-		if key == ID {
-			delete(i.Store, key)
-			return nil
-		}
-	}
-	return errs.ErrNotFound
-}
 */
