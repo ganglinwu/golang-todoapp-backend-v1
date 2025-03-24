@@ -100,7 +100,7 @@ func (ms *MongoStore) GetAllTodos() ([]models.TODO, error) {
 	return todos, nil
 }
 
-func (ms *MongoStore) CreateTodo(Name, Description string, DueDate time.Time) (bson.ObjectID, error) {
+func (ms *MongoStore) CreateTodo(Name, Description string, DueDate time.Time) (*bson.ObjectID, error) {
 	// TODO: check if duplicate todo exists
 	todo := models.TODO{Name: Name, Description: Description, DueDate: &DueDate}
 
@@ -109,12 +109,14 @@ func (ms *MongoStore) CreateTodo(Name, Description string, DueDate time.Time) (b
 
 	result, err := ms.Collection.InsertOne(ctx, todo)
 	if err != nil {
-		return bson.ObjectID{}, err
+		return &bson.ObjectID{}, err
 	}
 
 	objID := result.InsertedID.(bson.ObjectID)
 
-	return objID, nil
+	return &objID, nil
+}
+
 func (ms *MongoStore) UpdateTodoByID(ID string, todo models.TODO) error {
 	existingTodo, err := ms.GetTodoByID(ID)
 	if err != nil {
