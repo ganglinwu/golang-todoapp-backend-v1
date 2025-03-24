@@ -115,6 +115,37 @@ func (ms *MongoStore) CreateTodo(Name, Description string, DueDate time.Time) (b
 	objID := result.InsertedID.(bson.ObjectID)
 
 	return objID, nil
+func (ms *MongoStore) UpdateTodoByID(ID string, todo models.TODO) error {
+	existingTodo, err := ms.GetTodoByID(ID)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	objID, err := bson.ObjectIDFromHex(ID)
+	if err != nil {
+		return err
+	}
+
+	todo.ID = &objID
+	if todo.Name == "" {
+		todo.Name = existingTodo.Name
+	}
+	if todo.Description == "" {
+		todo.Description = existingTodo.Description
+	}
+	if todo.DueDate == nil {
+		todo.DueDate = existingTodo.DueDate
+	}
+
+	update := bson.D{{Key: "$set", Value: todo}}
+
+	_, err = ms.Collection.UpdateByID(ctx, objID, update)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (ms *MongoStore) DeleteTodoByID(ID string) (*mongo.DeleteResult, error) {
@@ -136,21 +167,3 @@ func (ms *MongoStore) DeleteTodoByID(ID string) (*mongo.DeleteResult, error) {
 	}
 	return dr, nil
 }
-
-/*
-
-
-func (ms *MongoStore) UpdateTodoByID(ID, description string) (models.TODO, error) {
-	if len(i.Store) == 0 {
-		return models.TODO{}, errs.ErrNotFound
-	}
-	for key := range i.Store {
-		if key == ID {
-			i.Store[key] = description
-			return models.TODO{ID: key, Description: description}, nil
-		}
-	}
-	return models.TODO{}, errs.ErrNotFound
-}
-
-*/

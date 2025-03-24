@@ -129,7 +129,31 @@ func (ts *TestSuite) TestCreateTodo() {
 		ts.FailNowf("failed to convert bson.ObjectID to Hex string:", err.Error())
 	}
 
-	want := models.TODO{ID: &insertedID, Name: name, Description: description, DueDate: &time}
+	want := models.TODO{ID: insertedID, Name: name, Description: description, DueDate: &time}
+
+	ts.compareTodoStructFields(got, want)
+}
+
+func (ts *TestSuite) TestUpdateTodoByID() {
+	ID := "67bc5c4f1e8db0c9a17efca0"
+	objID1, _ := bson.ObjectIDFromHex("67bc5c4f1e8db0c9a17efca0")
+
+	dueDate1 := time.Now().AddDate(0, 2, 0)
+	todo := models.TODO{
+		Name:        "Water plants and trim leaves",
+		Description: "Water all plants, trim only dead leaves",
+		DueDate:     &dueDate1,
+	}
+
+	err := ts.server.store.UpdateTodoByID(ID, todo)
+	if err != nil {
+		ts.FailNowf("err on UpdateTodoByID: ", err.Error())
+	}
+
+	got, _ := ts.server.store.GetTodoByID(ID)
+	want := todo
+
+	want.ID = &objID1
 
 	ts.compareTodoStructFields(got, want)
 }
