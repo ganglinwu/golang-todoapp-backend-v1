@@ -3,9 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/ganglinwu/todoapp-backend-v1/errs"
@@ -45,9 +43,9 @@ func NewTodoServer(store TodoStore) *TodoServer {
 
 	r.HandleFunc("GET /todo", ts.handleGetAllTodos)
 	r.HandleFunc("GET /todo/{ID}", ts.handleGetTodoByID)
-	r.HandleFunc("POST /todo/{ID}", ts.handlePostTodoByID)
-	r.HandleFunc("PATCH /todo/{ID}", ts.handleUpdateTodoByID)
-	r.HandleFunc("DELETE /todo/{ID}", ts.handleDeleteTodoByID)
+	r.HandleFunc("POST /todo", ts.handlePostTodoByID)
+	r.HandleFunc("PATCH /todo", ts.handleUpdateTodoByID)
+	r.HandleFunc("DELETE /todo", ts.handleDeleteTodoByID)
 
 	return ts
 }
@@ -61,11 +59,8 @@ func (ts TodoServer) handleGetAllTodos(w http.ResponseWriter, r *http.Request) {
 	case nil:
 		w.Header().Set("Content-Type", "application/json")
 		err := json.NewEncoder(w).Encode(todos)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "Something went wrong on our side. err: %s", err.Error())
-			return
-		}
+		handleErrAsHTTP501(w, err)
+
 		w.WriteHeader(http.StatusOK)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
@@ -81,31 +76,33 @@ func (ts TodoServer) handleGetTodoByID(w http.ResponseWriter, r *http.Request) {
 	case errs.ErrNotFound:
 		w.WriteHeader(http.StatusNotFound)
 	case nil:
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(todo)
+		handleErrAsHTTP501(w, err)
+
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(todo.Description))
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
 func (ts TodoServer) handlePostTodoByID(w http.ResponseWriter, r *http.Request) {
-	ID := r.PathValue("ID")
-	_, err := ts.TodoStore.GetTodoByID(ID)
+	err := r.ParseForm()
+	handleErrAsHTTP501(w, err)
+
+	ID := r.FormValue("ID")
+	_, err = ts.TodoStore.GetTodoByID(ID)
 	switch err {
 	case nil:
 		w.WriteHeader(http.StatusBadRequest)
 	case errs.ErrNotFound:
+		handleErrAsHTTP400(w, err)
 
-		read, err := io.ReadAll(r.Body)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		duedate, err := time.Parse("", r.FormValue("Due Date"))
+		handleErrAsHTTP501(w, err)
 
-		// TODO: Parse form data from body
-		description := strings.TrimPrefix(string(read), "Description=")
-		name := strings.TrimPrefix(string(read), "")
-		duedate, err := time.Parse("", "")
+		name := r.FormValue("Name")
+		description := r.FormValue("Description")
 
 		insertedID, err := ts.TodoStore.CreateTodo(name, description, duedate)
 		if err != nil {
