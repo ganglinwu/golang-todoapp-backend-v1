@@ -5,22 +5,21 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ganglinwu/todoapp-backend-v1/errs"
 	"github.com/ganglinwu/todoapp-backend-v1/models"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type TodoStore interface {
 	GetTodoByID(ID string) (models.TODO, error)
 	CreateTodo(Name, Description string, DueDate time.Time) (*bson.ObjectID, error)
 	GetAllTodos() ([]models.TODO, error)
-	UpdateTodoByID(ID, newDescription string) (models.TODO, error)
-	DeleteTodoByID(ID string) error
+	UpdateTodoByID(ID string, todo models.TODO) error
+	DeleteTodoByID(ID string) (*mongo.DeleteResult, error)
 }
 
 /*
@@ -55,16 +54,6 @@ func NewTodoServer(store TodoStore) *TodoServer {
 
 func (ts TodoServer) handleGetAllTodos(w http.ResponseWriter, r *http.Request) {
 	todos, err := ts.TodoStore.GetAllTodos()
-
-	// since our mock store is a map..
-	// it may not be arranged by ID
-	// in a real database we can return sort by ID
-	// so let's sort our slice
-	sort.Slice(todos, func(i, j int) bool {
-		ID1, _ := strconv.Atoi(todos[i].ID)
-		ID2, _ := strconv.Atoi(todos[j].ID)
-		return ID1 < ID2
-	})
 
 	switch err {
 	case errs.ErrNotFound:
@@ -113,63 +102,90 @@ func (ts TodoServer) handlePostTodoByID(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
+		// TODO: Parse form data from body
 		description := strings.TrimPrefix(string(read), "Description=")
+		name := strings.TrimPrefix(string(read), "")
+		duedate, err := time.Parse("", "")
 
-		err = ts.TodoStore.CreateTodoByID(ID, description)
+		insertedID, err := ts.TodoStore.CreateTodo(name, description, duedate)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, "Sucessfully created todo ID %s: %s", ID, description)
+		fmt.Fprintf(w, "Sucessfully created todo ID %s: \n Name :%s \n Description: %s \n DueDate: %s", insertedID.Hex(), name, description, duedate)
 	}
 }
 
 func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request) {
-	ID := r.PathValue("ID")
-	_, err := ts.TodoStore.GetTodoByID(ID)
+	err := r.ParseForm()
+	handleErrAsHTTP501(w, err)
+
+	todo := models.TODO{}
+	ID := r.FormValue("ID")
+
+	objID, err := bson.ObjectIDFromHex(ID)
+	handleErrAsHTTP501(w, err)
+
+	duedate, err := time.Parse("", r.FormValue("Due Date"))
+	handleErrAsHTTP501(w, err)
+
+	todo.ID = &objID
+	todo.Name = r.FormValue("Name")
+	todo.Description = r.FormValue("Description")
+	todo.DueDate = &duedate
+
+	_, err = ts.TodoStore.GetTodoByID(ID)
 	switch err {
 	case errs.ErrNotFound:
 		w.WriteHeader(http.StatusBadRequest)
 	case nil:
-		read, err := io.ReadAll(r.Body)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		newDescription := string(read)
-		todo, err := ts.TodoStore.UpdateTodoByID(ID, newDescription)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		handleErrAsHTTP501(w, err)
+
+		err = ts.TodoStore.UpdateTodoByID(ID, todo)
+		handleErrAsHTTP501(w, err)
+
 		err = json.NewEncoder(w).Encode(todo)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		handleErrAsHTTP501(w, err)
+
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
 func (ts TodoServer) handleDeleteTodoByID(w http.ResponseWriter, r *http.Request) {
-	ID := r.PathValue("ID")
+	err := r.ParseForm()
+	handleErrAsHTTP501(w, err)
+
+	ID := r.FormValue("ID")
+
 	todo, err := ts.TodoStore.GetTodoByID(ID)
 	switch err {
 	case errs.ErrNotFound:
 		w.WriteHeader(http.StatusBadRequest)
 	case nil:
-		err = ts.TodoStore.DeleteTodoByID(ID)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "%s", err.Error())
-			return
-		}
+		_, err = ts.TodoStore.DeleteTodoByID(ID)
+		handleErrAsHTTP501(w, err)
+
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "Sucessfully deleted todo ID %s: %s", ID, todo.Description)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "something went wrong on our end. err: %s", err.Error())
+	}
+}
+
+func handleErrAsHTTP501(w http.ResponseWriter, e error) {
+	if e != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", e.Error())
+		return
+	}
+}
+
+func handleErrAsHTTP400(w http.ResponseWriter, e error) {
+	if e != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 }
