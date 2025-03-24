@@ -8,14 +8,16 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ganglinwu/todoapp-backend-v1/errs"
 	"github.com/ganglinwu/todoapp-backend-v1/models"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type TodoStore interface {
 	GetTodoByID(ID string) (models.TODO, error)
-	CreateTodoByID(ID, description string) error
+	CreateTodo(Name, Description string, DueDate time.Time) (*bson.ObjectID, error)
 	GetAllTodos() ([]models.TODO, error)
 	UpdateTodoByID(ID, newDescription string) (models.TODO, error)
 	DeleteTodoByID(ID string) error
