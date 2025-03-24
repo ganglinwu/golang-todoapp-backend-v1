@@ -100,16 +100,24 @@ func (ms *MongoStore) GetAllTodos() ([]models.TODO, error) {
 	return todos, nil
 }
 
-/*
-func (ms *MongoStore) CreateTodoByID(ID, description string) error {
-	_, exists := i.Store[ID]
-	if exists {
-		return errs.ErrIdAlreadyInUse
-	} else {
-		i.Store[ID] = description
-		return nil
+func (ms *MongoStore) CreateTodo(Name, Description string, DueDate time.Time) (bson.ObjectID, error) {
+	// TODO: check if duplicate todo exists
+	todo := models.TODO{Name: Name, Description: Description, DueDate: &DueDate}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	result, err := ms.Collection.InsertOne(ctx, todo)
+	if err != nil {
+		return bson.ObjectID{}, err
 	}
+
+	objID := result.InsertedID.(bson.ObjectID)
+
+	return objID, nil
 }
+
+/*
 
 
 func (ms *MongoStore) UpdateTodoByID(ID, description string) (models.TODO, error) {

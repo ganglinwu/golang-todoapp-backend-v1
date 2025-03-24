@@ -114,3 +114,22 @@ func (ts *TestSuite) TestGetAllTodos() {
 		ts.compareTodoStructFields(got[i], want[i])
 	}
 }
+
+func (ts *TestSuite) TestCreateTodo() {
+	name := "new todo to be inserted"
+	description := "test description"
+	time := time.Now()
+	insertedID, err := ts.server.store.CreateTodo(name, description, time)
+	if err != nil {
+		ts.FailNowf("err on CreateTodo: ", err.Error())
+	}
+
+	got, err := ts.server.store.GetTodoByID(insertedID.Hex())
+	if err != nil {
+		ts.FailNowf("failed to convert bson.ObjectID to Hex string:", err.Error())
+	}
+
+	want := models.TODO{ID: &insertedID, Name: name, Description: description, DueDate: &time}
+
+	ts.compareTodoStructFields(got, want)
+}
