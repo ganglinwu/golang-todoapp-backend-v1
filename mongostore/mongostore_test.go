@@ -99,8 +99,23 @@ func (ts *TestSuite) TestGetTodoByID() {
 	ts.compareTodoStructFields(got, want)
 }
 
-/*
 func (ts *TestSuite) TestGetAllTodos() {
 	got, err := ts.server.store.GetAllTodos()
+	if err != nil {
+		ts.FailNowf("err on GetAllTodos: ", err.Error())
+	}
+
+	objID1, _ := bson.ObjectIDFromHex("67bc5c4f1e8db0c9a17efca0")
+	objID2, _ := bson.ObjectIDFromHex("67e0c98b2c3e82a398cdbb16")
+	dueDate1 := time.Now().AddDate(0, 3, 0)
+	dueDate2 := time.Now().AddDate(0, 0, 3)
+
+	want := []models.TODO{
+		{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
+		{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
+	}
+
+	for i := 0; i < len(want); i++ {
+		ts.compareTodoStructFields(got[i], want[i])
+	}
 }
-*/

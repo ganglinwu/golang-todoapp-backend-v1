@@ -80,6 +80,26 @@ func (ms *MongoStore) GetTodoByID(ID string) (models.TODO, error) {
 	return todo, nil
 }
 
+func (ms *MongoStore) GetAllTodos() ([]models.TODO, error) {
+	todos := []models.TODO{}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	filter := bson.D{{}}
+
+	cursor, err := ms.Collection.Find(ctx, filter)
+	if err != nil {
+		return []models.TODO{}, err
+	}
+
+	err = cursor.All(ctx, &todos)
+	if err != nil {
+		return []models.TODO{}, err
+	}
+
+	return todos, nil
+}
+
 /*
 func (ms *MongoStore) CreateTodoByID(ID, description string) error {
 	_, exists := i.Store[ID]
@@ -91,17 +111,6 @@ func (ms *MongoStore) CreateTodoByID(ID, description string) error {
 	}
 }
 
-func (ms *MongoStore) GetAllTodos() ([]models.TODO, error) {
-	todos := []models.TODO{}
-	if len(i.Store) == 0 {
-		return nil, errs.ErrNotFound
-	}
-	for key, value := range i.Store {
-		todo := models.TODO{ID: key, Description: value}
-		todos = append(todos, todo)
-	}
-	return todos, nil
-}
 
 func (ms *MongoStore) UpdateTodoByID(ID, description string) (models.TODO, error) {
 	if len(i.Store) == 0 {
