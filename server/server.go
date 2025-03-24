@@ -21,6 +21,16 @@ type TodoStore interface {
 	DeleteTodoByID(ID string) error
 }
 
+/*
+type MockTodoStore interface {
+	GetTodoByID(ID string) (models.MockTODO, error)
+	CreateTodoByID(ID, description string) error
+	GetAllTodos() ([]models.MockTODO, error)
+	UpdateTodoByID(ID, newDescription string) (models.MockTODO, error)
+	DeleteTodoByID(ID string) error
+}
+*/
+
 type TodoServer struct {
 	TodoStore TodoStore
 	http.Handler

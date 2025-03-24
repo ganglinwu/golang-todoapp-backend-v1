@@ -16,13 +16,13 @@ type StubTodoStore struct {
 	store map[string]string
 }
 
-func (s *StubTodoStore) GetTodoByID(ID string) (models.TODO, error) {
+func (s *StubTodoStore) GetTodoByID(ID string) (models.MockTODO, error) {
 	for key, value := range s.store {
 		if key == ID {
-			return models.TODO{ID: key, Description: value}, nil
+			return models.MockTODO{ID: key, Description: value}, nil
 		}
 	}
-	return models.TODO{}, errs.ErrNotFound
+	return models.MockTODO{}, errs.ErrNotFound
 }
 
 func (s *StubTodoStore) CreateTodoByID(ID, description string) error {
@@ -35,29 +35,29 @@ func (s *StubTodoStore) CreateTodoByID(ID, description string) error {
 	}
 }
 
-func (s *StubTodoStore) GetAllTodos() ([]models.TODO, error) {
-	todos := []models.TODO{}
+func (s *StubTodoStore) GetAllTodos() ([]models.MockTODO, error) {
+	todos := []models.MockTODO{}
 	if len(s.store) == 0 {
 		return nil, errs.ErrNotFound
 	}
 	for key, value := range s.store {
-		todo := models.TODO{ID: key, Description: value}
+		todo := models.MockTODO{ID: key, Description: value}
 		todos = append(todos, todo)
 	}
 	return todos, nil
 }
 
-func (s *StubTodoStore) UpdateTodoByID(ID, description string) (models.TODO, error) {
+func (s *StubTodoStore) UpdateTodoByID(ID, description string) (models.MockTODO, error) {
 	if len(s.store) == 0 {
-		return models.TODO{}, errs.ErrNotFound
+		return models.MockTODO{}, errs.ErrNotFound
 	}
 	for key := range s.store {
 		if key == ID {
 			s.store[key] = description
-			return models.TODO{ID: key, Description: description}, nil
+			return models.MockTODO{ID: key, Description: description}, nil
 		}
 	}
-	return models.TODO{}, errs.ErrNotFound
+	return models.MockTODO{}, errs.ErrNotFound
 }
 
 func (s *StubTodoStore) DeleteTodoByID(ID string) error {
@@ -120,12 +120,12 @@ func TestGetAllTodo(t *testing.T) {
 
 	s.ServeHTTP(response, request)
 
-	var marshaledResponse []models.TODO
+	var marshaledResponse []models.MockTODO
 	err := json.NewDecoder(response.Body).Decode(&marshaledResponse)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []models.TODO{
+	want := []models.MockTODO{
 		{
 			ID:          "1",
 			Description: "Hello there!",
@@ -158,12 +158,9 @@ func TestPostNewTodoByID(t *testing.T) {
 		got := response.Body.String()
 		want := "Sucessfully created todo ID 3: Save the earth"
 
-			got := response.Body.String()
-
-			assertTodoText(t, got, test.want)
-			assertStatusCode(t, response.Code, test.statusCode)
-		})
-	}
+		assertTodoText(t, got, want)
+		assertStatusCode(t, response.Code, http.StatusCreated)
+	})
 }
 
 func TestUpdateTodoByID(t *testing.T) {
@@ -178,12 +175,12 @@ func TestUpdateTodoByID(t *testing.T) {
 		testname            string
 		testpath            string
 		descriptionToUpdate string
-		want                models.TODO
+		want                models.MockTODO
 		statusCode          int
 	}{
-		{"update todo ID 1", "/todo/1", "Hello too!", models.TODO{ID: "1", Description: "Hello too!"}, http.StatusOK},
-		{"update todo ID 2", "/todo/2", "Pluck weeds", models.TODO{ID: "2", Description: "Pluck weeds"}, http.StatusOK},
-		{"update non-existent todo ID 3", "/todo/3", "test update description", models.TODO{}, http.StatusBadRequest},
+		{"update todo ID 1", "/todo/1", "Hello too!", models.MockTODO{ID: "1", Description: "Hello too!"}, http.StatusOK},
+		{"update todo ID 2", "/todo/2", "Pluck weeds", models.MockTODO{ID: "2", Description: "Pluck weeds"}, http.StatusOK},
+		{"update non-existent todo ID 3", "/todo/3", "test update description", models.MockTODO{}, http.StatusBadRequest},
 	}
 
 	for _, test := range updateTests {
@@ -197,7 +194,7 @@ func TestUpdateTodoByID(t *testing.T) {
 
 			s.ServeHTTP(response, request)
 
-			got := models.TODO{}
+			got := models.MockTODO{}
 
 			// blank variable used because
 			// error from decode only arise from EOF i.e. there's no Body
