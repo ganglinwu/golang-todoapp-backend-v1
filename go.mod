@@ -7,7 +7,6 @@ toolchain go1.23.7
 require (
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.10.0
-	go.mongodb.org/mongo-driver v1.17.3
 	go.mongodb.org/mongo-driver/v2 v2.1.0
 )
 
