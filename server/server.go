@@ -59,7 +59,11 @@ func (ts TodoServer) handleGetAllTodos(w http.ResponseWriter, r *http.Request) {
 	case nil:
 		w.Header().Set("Content-Type", "application/json")
 		err := json.NewEncoder(w).Encode(todos)
-		handleErrAsHTTP501(w, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err.Error())
+			return
+		}
 
 		w.WriteHeader(http.StatusOK)
 	default:
@@ -78,7 +82,11 @@ func (ts TodoServer) handleGetTodoByID(w http.ResponseWriter, r *http.Request) {
 	case nil:
 		w.Header().Set("Content-Type", "application/json")
 		err := json.NewEncoder(w).Encode(todo)
-		handleErrAsHTTP501(w, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err.Error())
+			return
+		}
 
 		w.WriteHeader(http.StatusOK)
 	default:
@@ -88,18 +96,26 @@ func (ts TodoServer) handleGetTodoByID(w http.ResponseWriter, r *http.Request) {
 
 func (ts TodoServer) handlePostTodoByID(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
-	handleErrAsHTTP501(w, err)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return
+	}
 
 	ID := r.FormValue("ID")
 	_, err = ts.TodoStore.GetTodoByID(ID)
 	switch err {
 	case nil:
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	case errs.ErrNotFound:
-		handleErrAsHTTP400(w, err)
 
 		duedate, err := time.Parse("", r.FormValue("Due Date"))
-		handleErrAsHTTP501(w, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err.Error())
+			return
+		}
 
 		name := r.FormValue("Name")
 		description := r.FormValue("Description")
@@ -107,6 +123,7 @@ func (ts TodoServer) handlePostTodoByID(w http.ResponseWriter, r *http.Request) 
 		insertedID, err := ts.TodoStore.CreateTodo(name, description, duedate)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err.Error())
 			return
 		}
 
@@ -117,16 +134,28 @@ func (ts TodoServer) handlePostTodoByID(w http.ResponseWriter, r *http.Request) 
 
 func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
-	handleErrAsHTTP501(w, err)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return
+	}
 
 	todo := models.TODO{}
 	ID := r.FormValue("ID")
 
 	objID, err := bson.ObjectIDFromHex(ID)
-	handleErrAsHTTP501(w, err)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return
+	}
 
 	duedate, err := time.Parse("", r.FormValue("Due Date"))
-	handleErrAsHTTP501(w, err)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return
+	}
 
 	todo.ID = &objID
 	todo.Name = r.FormValue("Name")
@@ -138,13 +167,20 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 	case errs.ErrNotFound:
 		w.WriteHeader(http.StatusBadRequest)
 	case nil:
-		handleErrAsHTTP501(w, err)
 
 		err = ts.TodoStore.UpdateTodoByID(ID, todo)
-		handleErrAsHTTP501(w, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err.Error())
+			return
+		}
 
 		err = json.NewEncoder(w).Encode(todo)
-		handleErrAsHTTP501(w, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err.Error())
+			return
+		}
 
 		w.WriteHeader(http.StatusOK)
 	}
@@ -152,7 +188,11 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 
 func (ts TodoServer) handleDeleteTodoByID(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
-	handleErrAsHTTP501(w, err)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return
+	}
 
 	ID := r.FormValue("ID")
 
@@ -162,7 +202,11 @@ func (ts TodoServer) handleDeleteTodoByID(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusBadRequest)
 	case nil:
 		_, err = ts.TodoStore.DeleteTodoByID(ID)
-		handleErrAsHTTP501(w, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err.Error())
+			return
+		}
 
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "Sucessfully deleted todo ID %s: %s", ID, todo.Description)
@@ -172,6 +216,7 @@ func (ts TodoServer) handleDeleteTodoByID(w http.ResponseWriter, r *http.Request
 	}
 }
 
+/*
 func handleErrAsHTTP501(w http.ResponseWriter, e error) {
 	if e != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -186,3 +231,5 @@ func handleErrAsHTTP400(w http.ResponseWriter, e error) {
 		return
 	}
 }
+
+*/
