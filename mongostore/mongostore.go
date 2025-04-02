@@ -61,6 +61,9 @@ func GetDBNameCollectionName() (string, string, error) {
 }
 
 func (ms *MongoStore) GetTodoByID(ID string) (models.TODO, error) {
+	if ID == "" {
+		return models.TODO{}, errs.ErrNotFound
+	}
 	objectID, err := bson.ObjectIDFromHex(ID)
 	if err != nil {
 		return models.TODO{}, err
@@ -74,7 +77,7 @@ func (ms *MongoStore) GetTodoByID(ID string) (models.TODO, error) {
 
 	err = ms.Collection.FindOne(ctx, filter).Decode(&todo)
 	if err != nil {
-		return models.TODO{}, err
+		return models.TODO{}, errs.ErrNotFound
 	}
 
 	return todo, nil
