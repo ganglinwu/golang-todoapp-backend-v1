@@ -44,8 +44,8 @@ func NewTodoServer(store TodoStore) *TodoServer {
 	r.HandleFunc("GET /todo", ts.handleGetAllTodos)
 	r.HandleFunc("GET /todo/{ID}", ts.handleGetTodoByID)
 	r.HandleFunc("POST /todo", ts.handlePostTodoByID)
-	r.HandleFunc("PATCH /todo", ts.handleUpdateTodoByID)
-	r.HandleFunc("DELETE /todo", ts.handleDeleteTodoByID)
+	r.HandleFunc("PATCH /todo/{ID}", ts.handleUpdateTodoByID)
+	r.HandleFunc("DELETE /todo/{ID}", ts.handleDeleteTodoByID)
 
 	return ts
 }
@@ -110,7 +110,7 @@ func (ts TodoServer) handlePostTodoByID(w http.ResponseWriter, r *http.Request) 
 		return
 	case errs.ErrNotFound:
 
-		duedate, err := time.Parse("", r.FormValue("Due Date"))
+		duedate, err := time.Parse(time.RFC3339, r.FormValue("DueDate"))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "%s", err.Error())
@@ -128,7 +128,7 @@ func (ts TodoServer) handlePostTodoByID(w http.ResponseWriter, r *http.Request) 
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, "Sucessfully created todo ID %s: \n Name :%s \n Description: %s \n DueDate: %s", insertedID.Hex(), name, description, duedate)
+		fmt.Fprintf(w, "\n Sucessfully created todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s", insertedID.Hex(), name, description, duedate)
 	}
 }
 
@@ -141,7 +141,7 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 	}
 
 	todo := models.TODO{}
-	ID := r.FormValue("ID")
+	ID := r.PathValue("ID")
 
 	objID, err := bson.ObjectIDFromHex(ID)
 	if err != nil {
@@ -150,7 +150,7 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	duedate, err := time.Parse("", r.FormValue("Due Date"))
+	duedate, err := time.Parse(time.RFC3339, r.FormValue("DueDate"))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
@@ -166,6 +166,7 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 	switch err {
 	case errs.ErrNotFound:
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	case nil:
 
 		err = ts.TodoStore.UpdateTodoByID(ID, todo)
@@ -183,6 +184,7 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 		}
 
 		w.WriteHeader(http.StatusOK)
+		return
 	}
 }
 
@@ -194,7 +196,7 @@ func (ts TodoServer) handleDeleteTodoByID(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	ID := r.FormValue("ID")
+	ID := r.PathValue("ID")
 
 	todo, err := ts.TodoStore.GetTodoByID(ID)
 	switch err {
@@ -209,7 +211,7 @@ func (ts TodoServer) handleDeleteTodoByID(w http.ResponseWriter, r *http.Request
 		}
 
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Sucessfully deleted todo ID %s: %s", ID, todo.Description)
+		fmt.Fprintf(w, "\n Sucessfully deleted todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s", ID, todo.Name, todo.Description, todo.DueDate)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "something went wrong on our end. err: %s", err.Error())

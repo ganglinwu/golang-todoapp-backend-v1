@@ -2,135 +2,174 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ganglinwu/todoapp-backend-v1/errs"
 	"github.com/ganglinwu/todoapp-backend-v1/models"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type StubTodoStore struct {
-	store map[string]string
+	store []models.TODO
 }
 
-func (s *StubTodoStore) GetTodoByID(ID string) (models.MockTODO, error) {
-	for key, value := range s.store {
-		if key == ID {
-			return models.MockTODO{ID: key, Description: value}, nil
+func (s *StubTodoStore) GetTodoByID(ID string) (models.TODO, error) {
+	for _, todo := range s.store {
+		if todo.ID.Hex() == ID {
+			return todo, nil
 		}
 	}
-	return models.MockTODO{}, errs.ErrNotFound
+	return models.TODO{}, errs.ErrNotFound
 }
 
-func (s *StubTodoStore) CreateTodoByID(ID, description string) error {
-	_, exist := s.store[ID]
-	if exist {
-		return errs.ErrIdAlreadyInUse
-	} else {
-		s.store[ID] = description
-		return nil
+func (s *StubTodoStore) CreateTodo(Name, Description string, DueDate time.Time) (*bson.ObjectID, error) {
+	createdTodo := models.TODO{
+		ID:          &objID3,
+		Name:        Name,
+		Description: Description,
+		DueDate:     &DueDate,
 	}
+	s.store = append(s.store, createdTodo)
+	return createdTodo.ID, nil
 }
 
-func (s *StubTodoStore) GetAllTodos() ([]models.MockTODO, error) {
-	todos := []models.MockTODO{}
+func (s *StubTodoStore) GetAllTodos() ([]models.TODO, error) {
 	if len(s.store) == 0 {
 		return nil, errs.ErrNotFound
 	}
-	for key, value := range s.store {
-		todo := models.MockTODO{ID: key, Description: value}
-		todos = append(todos, todo)
-	}
-	return todos, nil
+	return s.store, nil
 }
 
-func (s *StubTodoStore) UpdateTodoByID(ID, description string) (models.MockTODO, error) {
-	if len(s.store) == 0 {
-		return models.MockTODO{}, errs.ErrNotFound
-	}
-	for key := range s.store {
-		if key == ID {
-			s.store[key] = description
-			return models.MockTODO{ID: key, Description: description}, nil
-		}
-	}
-	return models.MockTODO{}, errs.ErrNotFound
-}
-
-func (s *StubTodoStore) DeleteTodoByID(ID string) error {
+func (s *StubTodoStore) UpdateTodoByID(ID string, todo models.TODO) error {
 	if len(s.store) == 0 {
 		return errs.ErrNotFound
 	}
-	for key := range s.store {
-		if key == ID {
-			delete(s.store, key)
+	updatedTODO := todo
+	objID, err := bson.ObjectIDFromHex(ID)
+	if err != nil {
+		return err
+	}
+	updatedTODO.ID = &objID
+
+	existingTODO, err := s.GetTodoByID(ID)
+	if err != nil {
+		return err
+	}
+
+	if updatedTODO.Name == "" {
+		updatedTODO.Name = existingTODO.Name
+	}
+	if updatedTODO.Description == "" {
+		updatedTODO.Description = existingTODO.Description
+	}
+	if updatedTODO.DueDate == nil {
+		updatedTODO.DueDate = existingTODO.DueDate
+	}
+
+	for i, todo := range s.store {
+		if todo.ID.Hex() == ID {
+			store = slices.Replace(store, i, i+1, updatedTODO)
 			return nil
 		}
 	}
 	return errs.ErrNotFound
 }
 
-func TestGetTodoByID(t *testing.T) {
-	store := map[string]string{
-		"1": "Hello there!",
-		"2": "Water plants",
+func (s *StubTodoStore) DeleteTodoByID(ID string) (*mongo.DeleteResult, error) {
+	if len(s.store) == 0 {
+		return nil, errs.ErrNotFound
 	}
+	for i, todo := range s.store {
+		if todo.ID.Hex() == ID {
+			s.store = slices.Delete(s.store, i, i+1)
+			return nil, nil
+		}
+	}
+	return nil, errs.ErrNotFound
+}
 
-	s := NewTodoServer(&StubTodoStore{store})
+var (
+	ID1       = "67bc5c4f1e8db0c9a17efca0"
+	ID2       = "67e0c98b2c3e82a398cdbb16"
+	ID3       = "67e0c98b2c3e82a398cdbb17"
+	objID1, _ = bson.ObjectIDFromHex(ID1)
+	objID2, _ = bson.ObjectIDFromHex(ID2)
+	objID3, _ = bson.ObjectIDFromHex(ID3)
+	dueDate1  = time.Now().AddDate(0, 3, 0).Truncate(time.Second)
+	dueDate2  = time.Now().AddDate(0, 0, 3).Truncate(time.Second)
+	store     = []models.TODO{
+		{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
+		{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
+	}
+	s = NewTodoServer(&StubTodoStore{store})
+)
 
+func TestGetTodoByID(t *testing.T) {
 	getTests := []struct {
 		testname   string
 		testpath   string
-		want       string
+		want       models.TODO
 		statusCode int
 	}{
-		{"get todo ID 1", "/todo/1", "Hello there!", http.StatusOK},
-		{"get todo ID 2", "/todo/2", "Water plants", http.StatusOK},
-		{"get non-existent todo ID 3", "/todo/3", "", http.StatusNotFound},
+		{"get todo 1", "/todo/67bc5c4f1e8db0c9a17efca0", models.TODO{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1}, http.StatusOK},
+		{"get todo 2", "/todo/67e0c98b2c3e82a398cdbb16", models.TODO{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2}, http.StatusOK},
+		{"get non-existent todo ID 3", "/todo/3", models.TODO{}, http.StatusNotFound},
 	}
 
 	for _, test := range getTests {
 		t.Run(test.testname, func(t *testing.T) {
 			request, _ := http.NewRequest(http.MethodGet, test.testpath, nil)
-			response := httptest.NewRecorder()
+			responseRecorder := httptest.NewRecorder()
 
-			s.ServeHTTP(response, request)
+			s.ServeHTTP(responseRecorder, request)
 
-			got := response.Body.String()
+			response := responseRecorder.Result()
 
-			assertTodoText(t, got, test.want)
-			assertStatusCode(t, response.Code, test.statusCode)
+			got := models.TODO{}
+
+			err := json.NewDecoder(response.Body).Decode(&got)
+			defer response.Body.Close()
+
+			if err != nil {
+				if !errors.Is(err, io.EOF) {
+					t.Fatal(err)
+				}
+			}
+
+			if !reflect.DeepEqual(got, test.want) {
+				t.Errorf("got %#v, want %#v \n", got, test.want)
+			}
+
+			assertStatusCode(t, responseRecorder.Code, test.statusCode)
 		})
 	}
 }
 
 func TestGetAllTodo(t *testing.T) {
-	store := map[string]string{
-		"1": "Hello there!",
-		"2": "Water plants",
-	}
-
-	s := NewTodoServer(&StubTodoStore{store})
-
 	request, _ := http.NewRequest(http.MethodGet, "/todo", nil)
 	response := httptest.NewRecorder()
 
 	s.ServeHTTP(response, request)
 
-	var marshaledResponse []models.MockTODO
+	var marshaledResponse []models.TODO
 	err := json.NewDecoder(response.Body).Decode(&marshaledResponse)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []models.MockTODO{
-		{
-			ID:          "1",
-			Description: "Hello there!",
-		},
-		{ID: "2", Description: "Water plants"},
+	want := []models.TODO{
+		{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
+		{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
 	}
 	if !reflect.DeepEqual(marshaledResponse, want) {
 		t.Errorf("got %#v, want %#v", marshaledResponse, want)
@@ -138,84 +177,89 @@ func TestGetAllTodo(t *testing.T) {
 }
 
 func TestPostNewTodoByID(t *testing.T) {
-	store := map[string]string{
-		"1": "Hello there!",
-		"2": "Water plants",
-	}
+	t.Run("post new todo", func(t *testing.T) {
+		data := url.Values{
+			"Name":        {"New Todo"},
+			"Description": {"Test description"},
+			"DueDate":     {dueDate1.Format(time.RFC3339)},
+		}
 
-	s := NewTodoServer(&StubTodoStore{store})
+		reader := strings.NewReader(data.Encode())
 
-	t.Run("post new todo on id 3", func(t *testing.T) {
-		reader := strings.NewReader("Description=Save the earth")
-
-		request, _ := http.NewRequest(http.MethodPost, "/todo/3", reader)
+		request, _ := http.NewRequest(http.MethodPost, "/todo", reader)
 		response := httptest.NewRecorder()
 
 		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 		s.ServeHTTP(response, request)
 
-		got := response.Body.String()
-		want := "Sucessfully created todo ID 3: Save the earth"
+		byteGot, _ := io.ReadAll(response.Result().Body)
+		got := string(byteGot)
+
+		want := fmt.Sprintf("\n Sucessfully created todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s", ID3, "New Todo", "Test description", dueDate1)
 
 		assertTodoText(t, got, want)
 		assertStatusCode(t, response.Code, http.StatusCreated)
 	})
 }
 
+// refactor from here
 func TestUpdateTodoByID(t *testing.T) {
-	store := map[string]string{
-		"1": "Hello there!",
-		"2": "Water plants",
+	updateStore := []models.TODO{
+		{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
+		{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
 	}
-
-	s := NewTodoServer(&StubTodoStore{store})
+	updateServer := NewTodoServer(&StubTodoStore{updateStore})
 
 	updateTests := []struct {
-		testname            string
-		testpath            string
-		descriptionToUpdate string
-		want                models.MockTODO
-		statusCode          int
+		testname    string
+		testpath    string
+		updatedTODO models.TODO
+		want        models.TODO
+		statusCode  int
 	}{
-		{"update todo ID 1", "/todo/1", "Hello too!", models.MockTODO{ID: "1", Description: "Hello too!"}, http.StatusOK},
-		{"update todo ID 2", "/todo/2", "Pluck weeds", models.MockTODO{ID: "2", Description: "Pluck weeds"}, http.StatusOK},
-		{"update non-existent todo ID 3", "/todo/3", "test update description", models.MockTODO{}, http.StatusBadRequest},
+		{"update todo ID 1", "/todo/" + ID1, models.TODO{ID: &objID1, Description: "Even less for cactus", DueDate: &dueDate1}, models.TODO{ID: &objID1, Name: "Water Plants", Description: "Even less for cactus", DueDate: &dueDate1}, http.StatusOK},
+		{"update todo ID 2", "/todo/" + ID2, models.TODO{ID: &objID2, Name: "Buy socks and underwear", DueDate: &dueDate2}, models.TODO{ID: &objID2, Name: "Buy socks and underwear", Description: "No show socks", DueDate: &dueDate2}, http.StatusOK},
+		{"update non-existent todo ID 3", "/todo/" + ID3, models.TODO{ID: &objID3, DueDate: &dueDate1}, models.TODO{ID: &objID3, DueDate: &dueDate1}, http.StatusBadRequest},
 	}
 
-	for _, test := range updateTests {
+	for i, test := range updateTests {
 		t.Run(test.testname, func(t *testing.T) {
-			reader := strings.NewReader(test.descriptionToUpdate)
+			data := url.Values{
+				"ID":          {test.updatedTODO.ID.Hex()},
+				"Name":        {test.updatedTODO.Name},
+				"Description": {test.updatedTODO.Description},
+				"DueDate":     {test.updatedTODO.DueDate.Format(time.RFC3339)},
+			}
+
+			reader := strings.NewReader(data.Encode())
 
 			request, _ := http.NewRequest(http.MethodPatch, test.testpath, reader)
-			response := httptest.NewRecorder()
+			responseRecorder := httptest.NewRecorder()
 
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-			s.ServeHTTP(response, request)
+			updateServer.ServeHTTP(responseRecorder, request)
 
-			got := models.MockTODO{}
+			if responseRecorder.Result().StatusCode == http.StatusOK {
 
-			// blank variable used because
-			// error from decode only arise from EOF i.e. there's no Body
-			// which is the case when we try to update non-existent todo ID
-			_ = json.NewDecoder(response.Body).Decode(&got)
+				got := store[i]
 
-			if !reflect.DeepEqual(got, test.want) {
-				t.Errorf("got %#v, want %#v", got, test.want)
+				if !reflect.DeepEqual(got, test.want) {
+					t.Errorf("got %#v, want %#v", got, test.want)
+				}
 			}
-			assertStatusCode(t, response.Code, test.statusCode)
+			assertStatusCode(t, responseRecorder.Code, test.statusCode)
 		})
 	}
 }
 
 func TestDeleteTodoByID(t *testing.T) {
-	store := map[string]string{
-		"1": "Hello there!",
-		"2": "Water plants",
+	deleteStore := []models.TODO{
+		{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
+		{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
 	}
-
-	s := NewTodoServer(&StubTodoStore{store})
+	deleteServer := NewTodoServer(&StubTodoStore{deleteStore})
 
 	deleteTests := []struct {
 		testname   string
@@ -223,22 +267,31 @@ func TestDeleteTodoByID(t *testing.T) {
 		want       string
 		statusCode int
 	}{
-		{"delete todo ID 1", "/todo/1", "Sucessfully deleted todo ID 1: Hello there!", http.StatusOK},
-		{"delete todo ID 2", "/todo/2", "Sucessfully deleted todo ID 2: Water plants", http.StatusOK},
+		{"delete todo ID 1", "/todo/" + ID1, fmt.Sprintf("\n Sucessfully deleted todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s", ID1, "Water Plants", "Not too much water for aloe vera", dueDate1), http.StatusOK},
+		{"delete todo ID 2", "/todo/" + ID2, fmt.Sprintf("\n Sucessfully deleted todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s", ID2, "Buy socks", "No show socks", dueDate2), http.StatusOK},
 		{"delete non-existent todo ID 3", "/todo/3", "", http.StatusBadRequest},
 	}
 
 	for _, test := range deleteTests {
 		t.Run(test.testname, func(t *testing.T) {
 			request, _ := http.NewRequest(http.MethodDelete, test.testpath, nil)
-			response := httptest.NewRecorder()
+			responseRecorder := httptest.NewRecorder()
 
-			s.ServeHTTP(response, request)
+			deleteServer.ServeHTTP(responseRecorder, request)
+			response := responseRecorder.Result()
 
-			got := response.Body.String()
+			byteGot, err := io.ReadAll(response.Body)
+			if err != nil {
+				if err != io.EOF {
+					t.Fatal(err)
+				}
+			}
+
+			defer response.Body.Close()
+			got := string(byteGot)
 
 			assertTodoText(t, got, test.want)
-			assertStatusCode(t, response.Code, test.statusCode)
+			assertStatusCode(t, responseRecorder.Code, test.statusCode)
 		})
 	}
 }
