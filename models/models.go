@@ -33,7 +33,7 @@ type TODO struct {
 }
 
 type PROJECT struct {
-	ID       *bson.ObjectID `json:"_id"`
+	ID       *bson.ObjectID `json:"_id,omitempty"`
 	ProjName string         `json:"projname"`
 	Tasks    []TODO         `json:"tasks"`
 }
