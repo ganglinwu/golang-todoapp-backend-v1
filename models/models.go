@@ -31,3 +31,9 @@ type TODO struct {
 	Description string         `json:"description,omitempty"`
 	DueDate     *time.Time     `json:"dueDate,omitempty"`
 }
+
+type PROJECT struct {
+	ID       *bson.ObjectID `json:"_id,omitempty"`
+	ProjName string         `json:"projname"`
+	Tasks    []TODO         `json:"tasks"`
+}
