@@ -145,26 +145,25 @@ func (ts *TestSuite) TestGetAllProjs() {
 	}
 }
 
-/*
-func (ts *TestSuite) TestCreateTodo() {
-	name := "new todo to be inserted"
-	description := "test description"
-	time := time.Now()
-	insertedID, err := ts.server.store.CreateTodo(name, description, time)
+func (ts *TestSuite) TestCreateProj() {
+	name := "new proj to be inserted"
+	tasks := []models.TODO{}
+	insertedID, err := ts.server.store.CreateProj(name, tasks)
 	if err != nil {
 		ts.FailNowf("err on CreateTodo: ", err.Error())
 	}
 
-	got, err := ts.server.store.GetTodoByID(insertedID.Hex())
+	got, err := ts.server.store.GetProjByID(insertedID.Hex())
 	if err != nil {
 		ts.FailNowf("failed to convert bson.ObjectID to Hex string:", err.Error())
 	}
 
-	want := models.TODO{ID: insertedID, Name: name, Description: description, DueDate: &time}
+	want := models.PROJECT{ID: insertedID, ProjName: name, Tasks: []models.TODO{}}
 
-	ts.compareTodoStructFields(got, want)
+	ts.compareProjStructFields(want, got)
 }
 
+/*
 func (ts *TestSuite) TestUpdateTodoByID() {
 	ID := "67bc5c4f1e8db0c9a17efca0"
 	objID1, _ := bson.ObjectIDFromHex("67bc5c4f1e8db0c9a17efca0")

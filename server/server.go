@@ -13,10 +13,10 @@ import (
 )
 
 type TodoStore interface {
-	CreateTodo(Name, Description string, DueDate time.Time) (*bson.ObjectID, error)
 	UpdateTodoByID(ID string, todo models.TODO) error
 	DeleteTodoByID(ID string) (*mongo.DeleteResult, error)
 	GetProjByID(ID string) (models.PROJECT, error)
+	CreateProj(Name string, Tasks []models.TODO) (*bson.ObjectID, error)
 	GetAllProjs() ([]models.PROJECT, error)
 }
 

@@ -103,14 +103,14 @@ func (ms *MongoStore) GetAllProjs() ([]models.PROJECT, error) {
 	return projs, nil
 }
 
-func (ms *MongoStore) CreateTodo(Name, Description string, DueDate time.Time) (*bson.ObjectID, error) {
-	// TODO: check if duplicate todo exists
-	todo := models.TODO{Name: Name, Description: Description, DueDate: &DueDate}
+func (ms *MongoStore) CreateProj(ProjName string, Tasks []models.TODO) (*bson.ObjectID, error) {
+	// TODO: check if duplicate proj exists
+	proj := models.PROJECT{ProjName: ProjName, Tasks: Tasks}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	result, err := ms.Collection.InsertOne(ctx, todo)
+	result, err := ms.Collection.InsertOne(ctx, proj)
 	if err != nil {
 		return &bson.ObjectID{}, err
 	}

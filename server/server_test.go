@@ -33,12 +33,11 @@ func (s *StubTodoStore) GetProjByID(ID string) (models.PROJECT, error) {
 	return models.PROJECT{}, errs.ErrNotFound
 }
 
-func (s *StubTodoStore) CreateTodo(Name, Description string, DueDate time.Time) (*bson.ObjectID, error) {
-	createdTodo := models.TODO{
-		ID:          &objID3,
-		Name:        Name,
-		Description: Description,
-		DueDate:     &DueDate,
+func (s *StubTodoStore) CreateProj(Name string, Tasks []models.TODO) (*bson.ObjectID, error) {
+	createdProj := models.PROJECT{
+		ID:       &objID3,
+		ProjName: ProjName,
+		Tasks, Tasks,
 	}
 	s.store = append(s.store, createdTodo)
 	return createdTodo.ID, nil
