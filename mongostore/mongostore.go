@@ -60,27 +60,27 @@ func GetDBNameCollectionName() (string, string, error) {
 	return dbName, collName, nil
 }
 
-func (ms *MongoStore) GetTodoByID(ID string) (models.TODO, error) {
+func (ms *MongoStore) GetProjByID(ID string) (models.PROJECT, error) {
 	if ID == "" {
-		return models.TODO{}, errs.ErrNotFound
+		return models.PROJECT{}, errs.ErrNotFound
 	}
 	objectID, err := bson.ObjectIDFromHex(ID)
 	if err != nil {
-		return models.TODO{}, err
+		return models.PROJECT{}, err
 	}
 	filter := bson.D{{Key: "_id", Value: &objectID}}
 
-	todo := models.TODO{}
+	proj := models.PROJECT{}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	err = ms.Collection.FindOne(ctx, filter).Decode(&todo)
+	err = ms.Collection.FindOne(ctx, filter).Decode(&proj)
 	if err != nil {
-		return models.TODO{}, errs.ErrNotFound
+		return models.PROJECT{}, errs.ErrNotFound
 	}
 
-	return todo, nil
+	return proj, nil
 }
 
 func (ms *MongoStore) GetAllTodos() ([]models.TODO, error) {
@@ -120,41 +120,42 @@ func (ms *MongoStore) CreateTodo(Name, Description string, DueDate time.Time) (*
 	return &objID, nil
 }
 
-func (ms *MongoStore) UpdateTodoByID(ID string, todo models.TODO) error {
-	existingTodo, err := ms.GetTodoByID(ID)
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+/*
+	func (ms *MongoStore) UpdateTodoByID(ID string, todo models.TODO) error {
+		existingTodo, err := ms.GetProjByID(ID)
+		if err != nil {
+			return err
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
 
-	objID, err := bson.ObjectIDFromHex(ID)
-	if err != nil {
-		return err
-	}
+		objID, err := bson.ObjectIDFromHex(ID)
+		if err != nil {
+			return err
+		}
 
-	todo.ID = &objID
-	if todo.Name == "" {
-		todo.Name = existingTodo.Name
-	}
-	if todo.Description == "" {
-		todo.Description = existingTodo.Description
-	}
-	if todo.DueDate == nil {
-		todo.DueDate = existingTodo.DueDate
-	}
+		todo.ID = &objID
+		if todo.Name == "" {
+			todo.Name = existingTodo.Name
+		}
+		if todo.Description == "" {
+			todo.Description = existingTodo.Description
+		}
+		if todo.DueDate == nil {
+			todo.DueDate = existingTodo.DueDate
+		}
 
-	update := bson.D{{Key: "$set", Value: todo}}
+		update := bson.D{{Key: "$set", Value: todo}}
 
-	_, err = ms.Collection.UpdateByID(ctx, objID, update)
-	if err != nil {
-		return err
+		_, err = ms.Collection.UpdateByID(ctx, objID, update)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
-	return nil
-}
-
+*/
 func (ms *MongoStore) DeleteTodoByID(ID string) (*mongo.DeleteResult, error) {
-	_, err := ms.GetTodoByID(ID)
+	_, err := ms.GetProjByID(ID)
 	if err != nil {
 		return nil, err
 	}

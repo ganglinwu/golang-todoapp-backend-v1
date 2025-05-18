@@ -21,16 +21,16 @@ import (
 )
 
 type StubTodoStore struct {
-	store []models.TODO
+	store []models.PROJECT
 }
 
-func (s *StubTodoStore) GetTodoByID(ID string) (models.TODO, error) {
-	for _, todo := range s.store {
-		if todo.ID.Hex() == ID {
-			return todo, nil
+func (s *StubTodoStore) GetProjByID(ID string) (models.PROJECT, error) {
+	for _, proj := range s.store {
+		if proj.ID.Hex() == ID {
+			return proj, nil
 		}
 	}
-	return models.TODO{}, errs.ErrNotFound
+	return models.PROJECT{}, errs.ErrNotFound
 }
 
 func (s *StubTodoStore) CreateTodo(Name, Description string, DueDate time.Time) (*bson.ObjectID, error) {

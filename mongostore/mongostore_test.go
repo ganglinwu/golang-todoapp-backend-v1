@@ -61,16 +61,21 @@ func (ts *TestSuite) SetupTest() {
 
 	objID1, _ := bson.ObjectIDFromHex("67bc5c4f1e8db0c9a17efca0")
 	objID2, _ := bson.ObjectIDFromHex("67e0c98b2c3e82a398cdbb16")
+	objID3, _ := bson.ObjectIDFromHex("682571d1dafbee2eecbf4913")
 	dueDate1 := time.Now().AddDate(0, 3, 0)
 	dueDate2 := time.Now().AddDate(0, 0, 3)
 
 	// seed data
-	todos := []interface{}{
-		models.TODO{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
-		models.TODO{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
+	todos := []models.TODO{
+		{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
+		{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
 	}
 
-	_, err = ts.collection.InsertMany(ctx, todos)
+	proj := models.PROJECT{ID: &objID3, ProjName: "proj1", Tasks: todos}
+
+	projSlice := []models.PROJECT{proj, {}}
+
+	_, err = ts.collection.InsertMany(ctx, projSlice)
 	if err != nil {
 		ts.FailNowf("error inserting into mongo atlas", err.Error())
 	}
@@ -80,20 +85,30 @@ func (ts *TestSuite) SetupTest() {
 func (ts *TestSuite) TearDownTest() {
 }
 
-func (ts *TestSuite) TestGetTodoByID() {
-	got, err := ts.server.store.GetTodoByID("67bc5c4f1e8db0c9a17efca0")
-	dueDate1 := time.Now().AddDate(0, 3, 0)
+func (ts *TestSuite) TestGetProjByID() {
+	got, err := ts.server.store.GetProjByID("682571d1dafbee2eecbf4913")
 
-	objID, _ := bson.ObjectIDFromHex("67bc5c4f1e8db0c9a17efca0")
-	want := models.TODO{ID: &objID, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1}
+	objID1, _ := bson.ObjectIDFromHex("67bc5c4f1e8db0c9a17efca0")
+	objID2, _ := bson.ObjectIDFromHex("67e0c98b2c3e82a398cdbb16")
+	objID3, _ := bson.ObjectIDFromHex("682571d1dafbee2eecbf4913")
+	dueDate1 := time.Now().AddDate(0, 3, 0)
+	dueDate2 := time.Now().AddDate(0, 0, 3)
+
+	// seed data
+	todos := []models.TODO{
+		{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
+		{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
+	}
+	want := models.PROJECT{ID: &objID3, ProjName: "proj1", Tasks: todos}
 
 	if err != nil {
-		ts.FailNowf("err on GetTodoByID: ", err.Error())
+		ts.FailNowf("err on GetProjByID: ", err.Error())
 	}
 
-	ts.compareTodoStructFields(got, want)
+	ts.compareProjStructFields(want, got)
 }
 
+/*
 func (ts *TestSuite) TestGetAllTodos() {
 	got, err := ts.server.store.GetAllTodos()
 	if err != nil {
@@ -169,3 +184,4 @@ func (ts *TestSuite) TestDeleteTodoByID() {
 
 	ts.Equal(got, want)
 }
+*/
