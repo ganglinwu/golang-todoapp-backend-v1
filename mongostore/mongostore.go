@@ -83,8 +83,8 @@ func (ms *MongoStore) GetProjByID(ID string) (models.PROJECT, error) {
 	return proj, nil
 }
 
-func (ms *MongoStore) GetAllTodos() ([]models.TODO, error) {
-	todos := []models.TODO{}
+func (ms *MongoStore) GetAllProjs() ([]models.PROJECT, error) {
+	projs := []models.PROJECT{}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -92,15 +92,15 @@ func (ms *MongoStore) GetAllTodos() ([]models.TODO, error) {
 
 	cursor, err := ms.Collection.Find(ctx, filter)
 	if err != nil {
-		return []models.TODO{}, err
+		return []models.PROJECT{}, err
 	}
 
-	err = cursor.All(ctx, &todos)
+	err = cursor.All(ctx, &projs)
 	if err != nil {
-		return []models.TODO{}, err
+		return []models.PROJECT{}, err
 	}
 
-	return todos, nil
+	return projs, nil
 }
 
 func (ms *MongoStore) CreateTodo(Name, Description string, DueDate time.Time) (*bson.ObjectID, error) {

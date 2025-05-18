@@ -44,7 +44,7 @@ func (s *StubTodoStore) CreateTodo(Name, Description string, DueDate time.Time) 
 	return createdTodo.ID, nil
 }
 
-func (s *StubTodoStore) GetAllTodos() ([]models.TODO, error) {
+func (s *StubTodoStore) GetAllProjs() ([]models.PROJECT, error) {
 	if len(s.store) == 0 {
 		return nil, errs.ErrNotFound
 	}
