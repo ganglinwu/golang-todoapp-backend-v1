@@ -141,7 +141,13 @@ func (ms *MongoStore) UpdateTodoByID(ID string, newTodoWithoutID models.TODO) er
 	if err != nil {
 		return err
 	}
-*/
+	// TODO: check result output
+	// e.g. 0 0 0 <ID>
+	// - MatchedCount, ModifiedCount, UpsertedCount, ObjectID of upserted document
+	fmt.Println(result)
+	return nil
+}
+
 func (ms *MongoStore) DeleteTodoByID(ID string) (*mongo.DeleteResult, error) {
 	_, err := ms.GetProjByID(ID)
 	if err != nil {
