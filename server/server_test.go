@@ -50,7 +50,7 @@ func (s *StubTodoStore) GetAllProjs() ([]models.PROJECT, error) {
 	return s.store, nil
 }
 
-func (s *StubTodoStore) UpdateTodoByID(ID string, todo models.TODO) error {
+func (s *StubTodoStore) UpdateProjByID(ID string, proj models.PROJECT, update models.TODO) error {
 	if len(s.store) == 0 {
 		return errs.ErrNotFound
 	}

@@ -17,6 +17,7 @@ type TodoStore interface {
 	GetProjByID(ID string) (models.PROJECT, error)
 	CreateProj(Name string, Tasks []models.TODO) (*bson.ObjectID, error)
 	GetAllProjs() ([]models.PROJECT, error)
+	UpdateProjNameByID(ID, newName string) error
 	UpdateTodoByID(ID string, newTodoWithoutID models.TODO) error
 }
 

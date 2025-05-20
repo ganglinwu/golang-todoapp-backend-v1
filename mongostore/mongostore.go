@@ -2,6 +2,7 @@ package mongostore
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -148,6 +149,28 @@ func (ms *MongoStore) UpdateTodoByID(ID string, newTodoWithoutID models.TODO) er
 	return nil
 }
 
+func (ms *MongoStore) UpdateProjNameByID(ID, newProjName string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	projID, err := bson.ObjectIDFromHex(ID)
+
+	query := bson.D{{"_id", &projID}}
+
+	update := bson.D{{"$set", bson.D{{"projname", newProjName}}}}
+
+	result, err := ms.Collection.UpdateOne(ctx, query, update)
+	if err != nil {
+		return err
+	}
+	// TODO: check result output
+	// e.g. 0 0 0 <ID>
+	// - MatchedCount, ModifiedCount, UpsertedCount, ObjectID of upserted document
+	fmt.Println(result)
+	return nil
+}
+
+/*
 func (ms *MongoStore) DeleteTodoByID(ID string) (*mongo.DeleteResult, error) {
 	_, err := ms.GetProjByID(ID)
 	if err != nil {
@@ -167,3 +190,4 @@ func (ms *MongoStore) DeleteTodoByID(ID string) (*mongo.DeleteResult, error) {
 	}
 	return dr, nil
 }
+*/
