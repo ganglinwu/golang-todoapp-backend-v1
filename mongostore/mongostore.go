@@ -170,12 +170,7 @@ func (ms *MongoStore) UpdateProjNameByID(ID, newProjName string) error {
 	return nil
 }
 
-/*
-func (ms *MongoStore) DeleteTodoByID(ID string) (*mongo.DeleteResult, error) {
-	_, err := ms.GetProjByID(ID)
-	if err != nil {
-		return nil, err
-	}
+func (ms *MongoStore) DeleteProjByID(ID string) (*mongo.DeleteResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -190,4 +185,3 @@ func (ms *MongoStore) DeleteTodoByID(ID string) (*mongo.DeleteResult, error) {
 	}
 	return dr, nil
 }
-*/

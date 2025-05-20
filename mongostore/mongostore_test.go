@@ -210,16 +210,14 @@ func (ts *TestSuite) TestUpdateProjNameByID() {
 	ts.compareProjStructFields(want, got)
 }
 
-/*
-func (ts *TestSuite) TestDeleteTodoByID() {
-	ID := "67bc5c4f1e8db0c9a17efca0"
-	dr, err := ts.server.store.DeleteTodoByID(ID)
+func (ts *TestSuite) TestDeleteProjByID() {
+	ID := "68299585e7b6718ddf79b567"
+	dr, err := ts.server.store.DeleteProjByID(ID)
 	if err != nil {
-		ts.FailNowf("err on DeleteTodoByID: ", err.Error())
+		ts.FailNowf("err on DeleteProjByID: ", err.Error())
 	}
 	got := dr.DeletedCount
 	want := int64(1)
 
 	ts.Equal(got, want)
 }
-*/
