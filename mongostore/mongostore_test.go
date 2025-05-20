@@ -210,6 +210,8 @@ func (ts *TestSuite) TestUpdateProjNameByID() {
 	ts.compareProjStructFields(want, got)
 }
 
+// TODO: consider testing the remaining proj struct
+// testing DeletedCount and ModifiedCount may not be accurate enough
 func (ts *TestSuite) TestDeleteProjByID() {
 	ID := "68299585e7b6718ddf79b567"
 	dr, err := ts.server.store.DeleteProjByID(ID)
@@ -219,5 +221,18 @@ func (ts *TestSuite) TestDeleteProjByID() {
 	got := dr.DeletedCount
 	want := int64(1)
 
-	ts.Equal(got, want)
+	ts.Equal(want, got)
+}
+
+func (ts *TestSuite) TestDeleteTodoByID() {
+	todoID := "682996bc78d219298228c10a"
+	projID := "68299585e7b6718ddf79b567"
+	updatedResult, err := ts.server.store.DeleteTodoByID(projID, todoID)
+	if err != nil {
+		ts.FailNowf("err on DeleteTodoByID: ", err.Error())
+	}
+	got := updatedResult.ModifiedCount
+	want := int64(1)
+
+	ts.Equal(want, got)
 }
