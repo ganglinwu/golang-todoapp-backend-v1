@@ -13,11 +13,11 @@ import (
 )
 
 type TodoStore interface {
-	UpdateTodoByID(ID string, todo models.TODO) error
 	DeleteTodoByID(ID string) (*mongo.DeleteResult, error)
 	GetProjByID(ID string) (models.PROJECT, error)
 	CreateProj(Name string, Tasks []models.TODO) (*bson.ObjectID, error)
 	GetAllProjs() ([]models.PROJECT, error)
+	UpdateTodoByID(ID string, newTodoWithoutID models.TODO) error
 }
 
 /*

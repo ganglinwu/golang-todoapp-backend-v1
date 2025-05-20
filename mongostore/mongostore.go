@@ -120,38 +120,26 @@ func (ms *MongoStore) CreateProj(ProjName string, Tasks []models.TODO) (*bson.Ob
 	return &objID, nil
 }
 
-/*
-	func (ms *MongoStore) UpdateTodoByID(ID string, todo models.TODO) error {
-		existingTodo, err := ms.GetProjByID(ID)
-		if err != nil {
-			return err
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
+func (ms *MongoStore) UpdateTodoByID(ID string, newTodoWithoutID models.TODO) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
-		objID, err := bson.ObjectIDFromHex(ID)
-		if err != nil {
-			return err
-		}
+	objID, err := bson.ObjectIDFromHex(ID)
+	if err != nil {
+		return err
+	}
 
-		todo.ID = &objID
-		if todo.Name == "" {
-			todo.Name = existingTodo.Name
-		}
-		if todo.Description == "" {
-			todo.Description = existingTodo.Description
-		}
-		if todo.DueDate == nil {
-			todo.DueDate = existingTodo.DueDate
-		}
+	query := bson.D{{"tasks._id", &objID}}
 
-		update := bson.D{{Key: "$set", Value: todo}}
+	// we need to add in ID
+	// else we will be updating with an object without ID!
+	newTodoWithoutID.ID = &objID
 
-		_, err = ms.Collection.UpdateByID(ctx, objID, update)
-		if err != nil {
-			return err
-		}
-		return nil
+	update := bson.D{{Key: "$set", Value: bson.D{{"tasks.$", newTodoWithoutID}}}}
+
+	result, err := ms.Collection.UpdateOne(ctx, query, update)
+	if err != nil {
+		return err
 	}
 */
 func (ms *MongoStore) DeleteTodoByID(ID string) (*mongo.DeleteResult, error) {

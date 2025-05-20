@@ -163,29 +163,33 @@ func (ts *TestSuite) TestCreateProj() {
 	ts.compareProjStructFields(want, got)
 }
 
-/*
 func (ts *TestSuite) TestUpdateTodoByID() {
-	ID := "67bc5c4f1e8db0c9a17efca0"
-	objID1, _ := bson.ObjectIDFromHex("67bc5c4f1e8db0c9a17efca0")
+	objID4, _ := bson.ObjectIDFromHex("682996bc78d219298228c10a")
+	objID5, _ := bson.ObjectIDFromHex("68299585e7b6718ddf79b567")
+	dueDate4 := time.Now().AddDate(0, 0, 3)
 
-	dueDate1 := time.Now().AddDate(0, 2, 0)
+	todos2 := []models.TODO{
+		{ID: &objID4, Name: "Updated Test task 3", Description: "updated test description", DueDate: &dueDate4, Priority: "low"},
+	}
+	want := models.PROJECT{ID: &objID5, ProjName: "proj2", Tasks: todos2}
+
 	todo := models.TODO{
-		Name:        "Water plants and trim leaves",
-		Description: "Water all plants, trim only dead leaves",
-		DueDate:     &dueDate1,
+		Name:        "Updated Test task 3",
+		Description: "updated test description",
+		DueDate:     &dueDate4,
+		Priority:    "low",
 	}
 
-	err := ts.server.store.UpdateTodoByID(ID, todo)
+	err := ts.server.store.UpdateTodoByID("682996bc78d219298228c10a", todo)
 	if err != nil {
 		ts.FailNowf("err on UpdateTodoByID: ", err.Error())
 	}
 
-	got, _ := ts.server.store.GetTodoByID(ID)
-	want := todo
+	got, _ := ts.server.store.GetProjByID("68299585e7b6718ddf79b567")
 
-	want.ID = &objID1
+	ts.compareProjStructFields(want, got)
+}
 
-	ts.compareTodoStructFields(got, want)
 }
 
 func (ts *TestSuite) TestDeleteTodoByID() {
