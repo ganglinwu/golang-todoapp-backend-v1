@@ -150,7 +150,7 @@ func (ts *TestSuite) TestCreateProj() {
 	tasks := []models.TODO{}
 	insertedID, err := ts.server.store.CreateProj(name, tasks)
 	if err != nil {
-		ts.FailNowf("err on CreateTodo: ", err.Error())
+		ts.FailNowf("err on CreateProj: ", err.Error())
 	}
 
 	got, err := ts.server.store.GetProjByID(insertedID.Hex())
@@ -159,6 +159,47 @@ func (ts *TestSuite) TestCreateProj() {
 	}
 
 	want := models.PROJECT{ID: insertedID, ProjName: name, Tasks: []models.TODO{}}
+
+	ts.compareProjStructFields(want, got)
+}
+
+func (ts *TestSuite) TestCreateTodo() {
+	objID4, _ := bson.ObjectIDFromHex("682996bc78d219298228c10a")
+	objID5, _ := bson.ObjectIDFromHex("68299585e7b6718ddf79b567")
+	dueDate1 := time.Now().AddDate(0, 3, 0)
+	dueDate4 := time.Now().AddDate(0, 0, 3)
+	todos2 := []models.TODO{
+		{ID: &objID4, Name: "Test task 3", Description: "test description", DueDate: &dueDate4},
+	}
+
+	// objID5
+	projID := "68299585e7b6718ddf79b567"
+	newTodoWithoutID := models.TODO{
+		Name:        "Inserted Todo",
+		Description: "Test",
+		DueDate:     &dueDate1,
+		Priority:    "low",
+	}
+	updatedResult, err := ts.server.store.CreateTodo(projID, newTodoWithoutID)
+	if err != nil {
+		ts.FailNowf("err on CreateTodo: ", err.Error())
+	}
+
+	insertedIDString := updatedResult.UpsertedID.(string)
+	insertedID, err := bson.ObjectIDFromHex(insertedIDString)
+	if err != nil {
+		ts.FailNowf("failed to convert bson.ObjectID to Hex string:", err.Error())
+	}
+
+	newTodoWithoutID.ID = &insertedID
+
+	got, err := ts.server.store.GetProjByID(insertedID.Hex())
+	if err != nil {
+		ts.FailNowf("failed to convert bson.ObjectID to Hex string:", err.Error())
+	}
+
+	want := models.PROJECT{ID: &objID5, ProjName: "proj2", Tasks: todos2}
+	want.Tasks = append(want.Tasks, newTodoWithoutID)
 
 	ts.compareProjStructFields(want, got)
 }

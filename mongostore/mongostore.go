@@ -104,6 +104,24 @@ func (ms *MongoStore) GetAllProjs() ([]models.PROJECT, error) {
 	return projs, nil
 }
 
+func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (*mongo.UpdateResult, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	query := bson.D{{"_id", projID}}
+
+	update := bson.D{{Key: "$set", Value: bson.D{{"tasks", newTodoWithoutID}}}}
+
+	opts := options.UpdateOne().SetUpsert(true)
+
+	result, err := ms.Collection.UpdateOne(ctx, query, update, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (ms *MongoStore) CreateProj(ProjName string, Tasks []models.TODO) (*bson.ObjectID, error) {
 	// TODO: check if duplicate proj exists
 	proj := models.PROJECT{ProjName: ProjName, Tasks: Tasks}
