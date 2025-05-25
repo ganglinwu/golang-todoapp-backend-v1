@@ -3,12 +3,10 @@ package server
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -16,12 +14,95 @@ import (
 
 	"github.com/ganglinwu/todoapp-backend-v1/errs"
 	"github.com/ganglinwu/todoapp-backend-v1/models"
+	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
+// initialize test suite struct
+type TestSuite struct {
+	suite.Suite
+	server *TodoServer
+}
+
 type StubTodoStore struct {
 	store []models.PROJECT
+}
+
+var (
+	objID1, _ = bson.ObjectIDFromHex("67bc5c4f1e8db0c9a17efca0")
+	objID2, _ = bson.ObjectIDFromHex("67e0c98b2c3e82a398cdbb16")
+	objID3, _ = bson.ObjectIDFromHex("682571d1dafbee2eecbf4913")
+	objID4, _ = bson.ObjectIDFromHex("682996bc78d219298228c10a")
+	objID5, _ = bson.ObjectIDFromHex("68299585e7b6718ddf79b567")
+	dueDate1  = time.Now().AddDate(0, 3, 0)
+	dueDate2  = time.Now().AddDate(0, 0, 3)
+	dueDate4  = time.Now().AddDate(0, 0, 3)
+
+	// seed data
+	todos1 = []models.TODO{
+		{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
+		{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
+	}
+	todos2 = []models.TODO{
+		{ID: &objID4, Name: "Test task 3", Description: "test description", DueDate: &dueDate4},
+	}
+	proj1 = models.PROJECT{ID: &objID3, ProjName: "proj1", Tasks: todos1}
+	proj2 = models.PROJECT{ID: &objID5, ProjName: "proj2", Tasks: todos2}
+
+	store = []models.PROJECT{proj1, proj2}
+)
+
+func TestServerTestSuite(t *testing.T) {
+	suite.Run(t, &TestSuite{})
+}
+
+// This runs only once per suite
+func (ts *TestSuite) SetupTest() {
+	// initialize
+	objID1, _ := bson.ObjectIDFromHex("67bc5c4f1e8db0c9a17efca0")
+	objID2, _ := bson.ObjectIDFromHex("67e0c98b2c3e82a398cdbb16")
+	objID3, _ := bson.ObjectIDFromHex("682571d1dafbee2eecbf4913")
+	objID4, _ := bson.ObjectIDFromHex("682996bc78d219298228c10a")
+	objID5, _ := bson.ObjectIDFromHex("68299585e7b6718ddf79b567")
+	dueDate1 := time.Now().AddDate(0, 3, 0)
+	dueDate2 := time.Now().AddDate(0, 0, 3)
+	dueDate4 := time.Now().AddDate(0, 0, 3)
+
+	// seed data
+	todos1 := []models.TODO{
+		{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
+		{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
+	}
+	todos2 := []models.TODO{
+		{ID: &objID4, Name: "Test task 3", Description: "test description", DueDate: &dueDate4},
+	}
+	proj1 := models.PROJECT{ID: &objID3, ProjName: "proj1", Tasks: todos1}
+	proj2 := models.PROJECT{ID: &objID5, ProjName: "proj2", Tasks: todos2}
+
+	store := []models.PROJECT{proj1, proj2}
+	ts.server = NewTodoServer(&StubTodoStore{store})
+}
+
+func (s *StubTodoStore) GetAllProjs() ([]models.PROJECT, error) {
+	if len(s.store) == 0 {
+		return []models.PROJECT{}, errs.ErrNotFound
+	}
+	return s.store, nil
+}
+
+func (s *StubTodoStore) GetAllTodos() ([]models.TODO, error) {
+	if len(s.store) == 0 {
+		return []models.TODO{}, errs.ErrNotFound
+	}
+	todos := []models.TODO{}
+
+	for i := range s.store {
+		for _, todo := range s.store[i].Tasks {
+			todos = append(todos, todo)
+		}
+	}
+	return todos, nil
 }
 
 func (s *StubTodoStore) GetProjByID(ID string) (models.PROJECT, error) {
@@ -34,127 +115,367 @@ func (s *StubTodoStore) GetProjByID(ID string) (models.PROJECT, error) {
 }
 
 func (s *StubTodoStore) CreateProj(Name string, Tasks []models.TODO) (*bson.ObjectID, error) {
-	createdProj := models.PROJECT{
-		ID:       &objID3,
-		ProjName: ProjName,
-		Tasks, Tasks,
-	}
-	s.store = append(s.store, createdTodo)
-	return createdTodo.ID, nil
+	randomObjID := bson.NewObjectID()
+	s.store = append(s.store, models.PROJECT{ID: &randomObjID, ProjName: Name, Tasks: Tasks})
+	return &randomObjID, nil
 }
 
-func (s *StubTodoStore) GetAllProjs() ([]models.PROJECT, error) {
+func (s *StubTodoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (*mongo.UpdateResult, error) {
 	if len(s.store) == 0 {
-		return nil, errs.ErrNotFound
+		return &mongo.UpdateResult{MatchedCount: 0, ModifiedCount: 0, UpsertedCount: 0}, errs.ErrNotFound
 	}
-	return s.store, nil
+	for projIndex, proj := range s.store {
+		if proj.ID.Hex() == projID {
+			taskID := bson.NewObjectID()
+			s.store[projIndex].Tasks = append(s.store[projIndex].Tasks, models.TODO{
+				ID:          &taskID,
+				Name:        newTodoWithoutID.Name,
+				Description: newTodoWithoutID.Description,
+				DueDate:     newTodoWithoutID.DueDate,
+				Priority:    newTodoWithoutID.Priority,
+			})
+			return &mongo.UpdateResult{MatchedCount: 1, ModifiedCount: 1, UpsertedCount: 1, UpsertedID: taskID.Hex()}, nil
+		}
+	}
+	return &mongo.UpdateResult{MatchedCount: 0, ModifiedCount: 0, UpsertedCount: 0}, errs.ErrNotFound
 }
 
-func (s *StubTodoStore) UpdateProjByID(ID string, proj models.PROJECT, update models.TODO) error {
+func (s *StubTodoStore) UpdateProjNameByID(ID, NewName string) error {
 	if len(s.store) == 0 {
 		return errs.ErrNotFound
 	}
-	updatedTODO := todo
-	objID, err := bson.ObjectIDFromHex(ID)
-	if err != nil {
-		return err
-	}
-	updatedTODO.ID = &objID
-
-	existingTODO, err := s.GetTodoByID(ID)
-	if err != nil {
-		return err
-	}
-
-	if updatedTODO.Name == "" {
-		updatedTODO.Name = existingTODO.Name
-	}
-	if updatedTODO.Description == "" {
-		updatedTODO.Description = existingTODO.Description
-	}
-	if updatedTODO.DueDate == nil {
-		updatedTODO.DueDate = existingTODO.DueDate
-	}
-
-	for i, todo := range s.store {
-		if todo.ID.Hex() == ID {
-			store = slices.Replace(store, i, i+1, updatedTODO)
-			return nil
+	for index, proj := range s.store {
+		IDStr := proj.ID.Hex()
+		if IDStr == ID {
+			s.store[index].ProjName = NewName
 		}
 	}
-	return errs.ErrNotFound
+	return nil
 }
 
-func (s *StubTodoStore) DeleteTodoByID(ID string) (*mongo.DeleteResult, error) {
+func (s *StubTodoStore) DeleteProjByID(ID string) (*mongo.DeleteResult, error) {
 	if len(s.store) == 0 {
-		return nil, errs.ErrNotFound
+		return &mongo.DeleteResult{DeletedCount: 0}, errs.ErrNotFound
 	}
-	for i, todo := range s.store {
-		if todo.ID.Hex() == ID {
+	for i, proj := range s.store {
+		if proj.ID.Hex() == ID {
 			s.store = slices.Delete(s.store, i, i+1)
-			return nil, nil
+			return &mongo.DeleteResult{DeletedCount: 1}, nil
 		}
 	}
-	return nil, errs.ErrNotFound
+	return &mongo.DeleteResult{DeletedCount: 0}, errs.ErrNotFound
 }
 
-var (
-	ID1       = "67bc5c4f1e8db0c9a17efca0"
-	ID2       = "67e0c98b2c3e82a398cdbb16"
-	ID3       = "67e0c98b2c3e82a398cdbb17"
-	objID1, _ = bson.ObjectIDFromHex(ID1)
-	objID2, _ = bson.ObjectIDFromHex(ID2)
-	objID3, _ = bson.ObjectIDFromHex(ID3)
-	dueDate1  = time.Now().AddDate(0, 3, 0).Truncate(time.Second)
-	dueDate2  = time.Now().AddDate(0, 0, 3).Truncate(time.Second)
-	store     = []models.TODO{
+func (s *StubTodoStore) DeleteTodoByID(todoID string) (*mongo.UpdateResult, error) {
+	if len(s.store) == 0 {
+		return &mongo.UpdateResult{MatchedCount: 0, ModifiedCount: 0, UpsertedCount: 0}, errs.ErrNotFound
+	}
+	for projIndex, proj := range s.store {
+		for taskIndex, task := range proj.Tasks {
+			if task.ID.Hex() == todoID {
+				s.store[projIndex].Tasks = slices.Delete(s.store[projIndex].Tasks, taskIndex, taskIndex+1)
+				return &mongo.UpdateResult{MatchedCount: 1, ModifiedCount: 1, UpsertedCount: 0}, nil
+			}
+		}
+	}
+	return &mongo.UpdateResult{MatchedCount: 0, ModifiedCount: 0, UpsertedCount: 0}, errs.ErrNotFound
+}
+
+func (s *StubTodoStore) UpdateTodoByID(ID string, newTodoWithoutID models.TODO) error {
+	for projIndex, proj := range s.store {
+		for taskIndex, task := range proj.Tasks {
+			if task.ID.Hex() == ID {
+				taskID, err := bson.ObjectIDFromHex(ID)
+				if err != nil {
+					return err
+				}
+				s.store[projIndex].Tasks[taskIndex].ID = &taskID
+				s.store[projIndex].Tasks[taskIndex].Name = newTodoWithoutID.Name
+				s.store[projIndex].Tasks[taskIndex].Description = newTodoWithoutID.Description
+				s.store[projIndex].Tasks[taskIndex].DueDate = newTodoWithoutID.DueDate
+				s.store[projIndex].Tasks[taskIndex].Priority = newTodoWithoutID.Priority
+			}
+		}
+	}
+	return nil
+}
+
+func (ts *TestSuite) TestGetAllProjs() {
+	request, _ := http.NewRequest(http.MethodGet, "/proj", nil)
+	responseRecorder := httptest.NewRecorder()
+
+	ts.server.ServeHTTP(responseRecorder, request)
+
+	response := responseRecorder.Result()
+
+	got := []models.PROJECT{}
+
+	err := json.NewDecoder(response.Body).Decode(&got)
+	defer response.Body.Close()
+
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
+
+	for index, proj := range got {
+		ts.compareProjStructFields(store[index], proj)
+	}
+
+	ts.assertStatusCode(200, responseRecorder.Code)
+}
+
+func (ts *TestSuite) TestGetAllTodos() {
+	request, _ := http.NewRequest(http.MethodGet, "/todo", nil)
+	responseRecorder := httptest.NewRecorder()
+
+	ts.server.ServeHTTP(responseRecorder, request)
+
+	response := responseRecorder.Result()
+
+	got := []models.TODO{}
+
+	err := json.NewDecoder(response.Body).Decode(&got)
+	defer response.Body.Close()
+
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
+	objID1, _ := bson.ObjectIDFromHex("67bc5c4f1e8db0c9a17efca0")
+	objID2, _ := bson.ObjectIDFromHex("67e0c98b2c3e82a398cdbb16")
+	objID4, _ := bson.ObjectIDFromHex("682996bc78d219298228c10a")
+	dueDate1 := time.Now().AddDate(0, 3, 0)
+	dueDate2 := time.Now().AddDate(0, 0, 3)
+	dueDate4 := time.Now().AddDate(0, 0, 3)
+
+	want := []models.TODO{
 		{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
 		{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
+		{ID: &objID4, Name: "Test task 3", Description: "test description", DueDate: &dueDate4},
 	}
-	s = NewTodoServer(&StubTodoStore{store})
-)
+	for i, todo := range want {
+		ts.compareTodoStructFields(todo, got[i])
+	}
+}
 
-func TestGetTodoByID(t *testing.T) {
+func (ts *TestSuite) TestGetProjByID() {
 	getTests := []struct {
 		testname   string
 		testpath   string
-		want       models.TODO
+		want       models.PROJECT
 		statusCode int
 	}{
-		{"get todo 1", "/todo/67bc5c4f1e8db0c9a17efca0", models.TODO{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1}, http.StatusOK},
-		{"get todo 2", "/todo/67e0c98b2c3e82a398cdbb16", models.TODO{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2}, http.StatusOK},
-		{"get non-existent todo ID 3", "/todo/3", models.TODO{}, http.StatusNotFound},
+		{"get proj 1", "/proj/682571d1dafbee2eecbf4913", proj1, http.StatusOK},
+		{"get proj 2", "/proj/68299585e7b6718ddf79b567", proj2, http.StatusOK},
+		{"get non-existent proj 3", "/proj/3", models.PROJECT{}, http.StatusNotFound},
 	}
 
 	for _, test := range getTests {
-		t.Run(test.testname, func(t *testing.T) {
-			request, _ := http.NewRequest(http.MethodGet, test.testpath, nil)
-			responseRecorder := httptest.NewRecorder()
+		request, _ := http.NewRequest(http.MethodGet, test.testpath, nil)
+		responseRecorder := httptest.NewRecorder()
 
-			s.ServeHTTP(responseRecorder, request)
+		ts.server.ServeHTTP(responseRecorder, request)
 
-			response := responseRecorder.Result()
+		response := responseRecorder.Result()
 
-			got := models.TODO{}
+		got := models.PROJECT{}
 
-			err := json.NewDecoder(response.Body).Decode(&got)
-			defer response.Body.Close()
+		err := json.NewDecoder(response.Body).Decode(&got)
+		defer response.Body.Close()
 
-			if err != nil {
-				if !errors.Is(err, io.EOF) {
-					t.Fatal(err)
-				}
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				ts.FailNow(err.Error())
 			}
+		}
 
-			if !reflect.DeepEqual(got, test.want) {
-				t.Errorf("got %#v, want %#v \n", got, test.want)
-			}
+		ts.compareProjStructFields(test.want, got)
 
-			assertStatusCode(t, responseRecorder.Code, test.statusCode)
-		})
+		ts.assertStatusCode(test.statusCode, responseRecorder.Code)
 	}
 }
 
+func (ts *TestSuite) TestCreateNewProj() {
+	data := url.Values{
+		"ProjName": {"Test Project Name"},
+	}
+	reader := strings.NewReader(data.Encode())
+
+	request, _ := http.NewRequest(http.MethodPost, "/proj", reader)
+	response := httptest.NewRecorder()
+
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	ts.server.ServeHTTP(response, request)
+
+	byteGot, _ := io.ReadAll(response.Result().Body)
+	insertedIDString := string(byteGot)[:24]
+
+	got, err := ts.server.TodoStore.GetProjByID(insertedIDString)
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
+
+	insertedObjID, err := bson.ObjectIDFromHex(insertedIDString)
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
+
+	want := models.PROJECT{ID: &insertedObjID, ProjName: "Test Project Name", Tasks: []models.TODO{}}
+
+	ts.compareProjStructFields(want, got)
+}
+
+func (ts *TestSuite) TestCreateTodo() {
+	// reset seeded data
+	ts.SetupTest()
+
+	data := url.Values{
+		"Name":        {"Newly Created Task"},
+		"Description": {"Newly Created Description"},
+		"DueDate":     {"2020-03-20T02:00:00+08:00"},
+		"Priority":    {"high"},
+	}
+	reader := strings.NewReader(data.Encode())
+
+	request, _ := http.NewRequest(http.MethodPost, "/proj/68299585e7b6718ddf79b567", reader)
+	responseRecorder := httptest.NewRecorder()
+
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	ts.server.ServeHTTP(responseRecorder, request)
+
+	response := responseRecorder.Result()
+
+	byteGot, err := io.ReadAll(response.Body)
+	if err != nil {
+		if err != io.EOF {
+			ts.FailNow(err.Error())
+		}
+	}
+	defer response.Body.Close()
+
+	ts.assertStatusCode(201, responseRecorder.Code)
+
+	insertedIDString := string(byteGot)[:24]
+
+	insertedObjID, err := bson.ObjectIDFromHex(insertedIDString)
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
+	dueDate, err := time.Parse(time.RFC3339, "2020-03-20T02:00:00+08:00")
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
+
+	got, err := ts.server.TodoStore.GetProjByID("68299585e7b6718ddf79b567")
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
+
+	want := models.PROJECT{ID: &objID5, ProjName: "proj2", Tasks: todos2}
+	want.Tasks = append(want.Tasks, models.TODO{
+		ID:          &insertedObjID,
+		Name:        "Newly Created Task",
+		Description: "Newly Created Description",
+		DueDate:     &dueDate,
+		Priority:    "high",
+	})
+
+	ts.compareProjStructFields(want, got)
+}
+
+func (ts *TestSuite) TestUpdateProjNameByID() {
+	data := url.Values{
+		"ProjName": {"Updated Proj Name"},
+	}
+
+	reader := strings.NewReader(data.Encode())
+
+	request, _ := http.NewRequest(http.MethodPatch, "/proj/68299585e7b6718ddf79b567", reader)
+	responseRecorder := httptest.NewRecorder()
+
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	ts.server.ServeHTTP(responseRecorder, request)
+
+	got, err := ts.server.TodoStore.GetProjByID("68299585e7b6718ddf79b567")
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
+
+	want := models.PROJECT{ID: &objID5, ProjName: "Updated Proj Name", Tasks: todos2}
+
+	ts.compareProjStructFields(want, got)
+}
+
+func (ts *TestSuite) TestUpdateTodoByID() {
+	// reset seeded data
+	ts.SetupTest()
+
+	data := url.Values{
+		"Name":        {"Updated Task"},
+		"Description": {"Updated Description"},
+		"DueDate":     {"2025-03-20T02:00:00+08:00"},
+		"Priority":    {"low"},
+	}
+
+	reader := strings.NewReader(data.Encode())
+
+	request, _ := http.NewRequest(http.MethodPatch, "/todo/682996bc78d219298228c10a", reader)
+	responseRecorder := httptest.NewRecorder()
+
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	ts.server.ServeHTTP(responseRecorder, request)
+
+	got, err := ts.server.TodoStore.GetProjByID("68299585e7b6718ddf79b567")
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
+
+	wantDueDate, err := time.Parse(time.RFC3339, "2025-03-20T02:00:00+08:00")
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
+
+	want := models.PROJECT{
+		ID:       &objID5,
+		ProjName: "proj2",
+		Tasks: []models.TODO{
+			{ID: &objID4, Name: "Updated Task", Description: "Updated Description", DueDate: &wantDueDate, Priority: "low"},
+		},
+	}
+
+	ts.compareProjStructFields(want, got)
+}
+
+func (ts *TestSuite) TestDeleteProjByID() {
+	request, _ := http.NewRequest(http.MethodDelete, "/proj/68299585e7b6718ddf79b567", nil)
+	responseRecorder := httptest.NewRecorder()
+
+	ts.server.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	byteGot, err := io.ReadAll(response.Body)
+	if err != nil {
+		if err != io.EOF {
+			ts.FailNow(err.Error())
+		}
+	}
+
+	defer response.Body.Close()
+	got := string(byteGot)
+
+	ts.assertTodoText("1", got)
+	ts.assertStatusCode(200, responseRecorder.Code)
+}
+
+func (ts *TestSuite) TestDeleteTodoByID() {
+	// reset seeded data
+	ts.SetupTest()
+}
+
+/*
 func TestGetAllTodo(t *testing.T) {
 	request, _ := http.NewRequest(http.MethodGet, "/todo", nil)
 	response := httptest.NewRecorder()
@@ -175,83 +496,6 @@ func TestGetAllTodo(t *testing.T) {
 	}
 }
 
-func TestPostNewTodoByID(t *testing.T) {
-	t.Run("post new todo", func(t *testing.T) {
-		data := url.Values{
-			"Name":        {"New Todo"},
-			"Description": {"Test description"},
-			"DueDate":     {dueDate1.Format(time.RFC3339)},
-		}
-
-		reader := strings.NewReader(data.Encode())
-
-		request, _ := http.NewRequest(http.MethodPost, "/todo", reader)
-		response := httptest.NewRecorder()
-
-		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-		s.ServeHTTP(response, request)
-
-		byteGot, _ := io.ReadAll(response.Result().Body)
-		got := string(byteGot)
-
-		want := fmt.Sprintf("\n Sucessfully created todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s", ID3, "New Todo", "Test description", dueDate1)
-
-		assertTodoText(t, got, want)
-		assertStatusCode(t, response.Code, http.StatusCreated)
-	})
-}
-
-// refactor from here
-func TestUpdateTodoByID(t *testing.T) {
-	updateStore := []models.TODO{
-		{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
-		{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
-	}
-	updateServer := NewTodoServer(&StubTodoStore{updateStore})
-
-	updateTests := []struct {
-		testname    string
-		testpath    string
-		updatedTODO models.TODO
-		want        models.TODO
-		statusCode  int
-	}{
-		{"update todo ID 1", "/todo/" + ID1, models.TODO{ID: &objID1, Description: "Even less for cactus", DueDate: &dueDate1}, models.TODO{ID: &objID1, Name: "Water Plants", Description: "Even less for cactus", DueDate: &dueDate1}, http.StatusOK},
-		{"update todo ID 2", "/todo/" + ID2, models.TODO{ID: &objID2, Name: "Buy socks and underwear", DueDate: &dueDate2}, models.TODO{ID: &objID2, Name: "Buy socks and underwear", Description: "No show socks", DueDate: &dueDate2}, http.StatusOK},
-		{"update non-existent todo ID 3", "/todo/" + ID3, models.TODO{ID: &objID3, DueDate: &dueDate1}, models.TODO{ID: &objID3, DueDate: &dueDate1}, http.StatusBadRequest},
-	}
-
-	for i, test := range updateTests {
-		t.Run(test.testname, func(t *testing.T) {
-			data := url.Values{
-				"ID":          {test.updatedTODO.ID.Hex()},
-				"Name":        {test.updatedTODO.Name},
-				"Description": {test.updatedTODO.Description},
-				"DueDate":     {test.updatedTODO.DueDate.Format(time.RFC3339)},
-			}
-
-			reader := strings.NewReader(data.Encode())
-
-			request, _ := http.NewRequest(http.MethodPatch, test.testpath, reader)
-			responseRecorder := httptest.NewRecorder()
-
-			request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-			updateServer.ServeHTTP(responseRecorder, request)
-
-			if responseRecorder.Result().StatusCode == http.StatusOK {
-
-				got := store[i]
-
-				if !reflect.DeepEqual(got, test.want) {
-					t.Errorf("got %#v, want %#v", got, test.want)
-				}
-			}
-			assertStatusCode(t, responseRecorder.Code, test.statusCode)
-		})
-	}
-}
 
 func TestDeleteTodoByID(t *testing.T) {
 	deleteStore := []models.TODO{
@@ -294,3 +538,4 @@ func TestDeleteTodoByID(t *testing.T) {
 		})
 	}
 }
+*/
