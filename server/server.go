@@ -21,7 +21,7 @@ type TodoStore interface {
 	UpdateProjNameByID(ID, newName string) error
 	UpdateTodoByID(todoID string, newTodoWithoutID models.TODO) error
 	DeleteProjByID(ID string) (*mongo.DeleteResult, error)
-	DeleteTodoByID(ID string) (*mongo.UpdateResult, error)
+	DeleteTodoByID(todoID string) (*mongo.UpdateResult, error)
 }
 
 type TodoServer struct {

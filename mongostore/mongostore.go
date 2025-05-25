@@ -218,21 +218,16 @@ func (ms *MongoStore) DeleteProjByID(ID string) (*mongo.DeleteResult, error) {
 	return dr, nil
 }
 
-func (ms *MongoStore) DeleteTodoByID(ProjID, TodoID string) (*mongo.UpdateResult, error) {
+func (ms *MongoStore) DeleteTodoByID(TodoID string) (*mongo.UpdateResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-
-	projID, err := bson.ObjectIDFromHex(ProjID)
-	if err != nil {
-		return nil, err
-	}
 
 	todoID, err := bson.ObjectIDFromHex(TodoID)
 	if err != nil {
 		return nil, err
 	}
 
-	query := bson.D{{"_id", &projID}}
+	query := bson.D{{"tasks._id", &todoID}}
 
 	update := bson.D{{"$pull", bson.D{{"tasks", bson.D{{"_id", &todoID}}}}}}
 

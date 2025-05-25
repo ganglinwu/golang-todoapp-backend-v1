@@ -290,8 +290,7 @@ func (ts *TestSuite) TestDeleteProjByID() {
 
 func (ts *TestSuite) TestDeleteTodoByID() {
 	todoID := "682996bc78d219298228c10a"
-	projID := "68299585e7b6718ddf79b567"
-	updatedResult, err := ts.server.store.DeleteTodoByID(projID, todoID)
+	updatedResult, err := ts.server.store.DeleteTodoByID(todoID)
 	if err != nil {
 		ts.FailNowf("err on DeleteTodoByID: ", err.Error())
 	}
