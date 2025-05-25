@@ -1,4 +1,4 @@
-- mongoDB is a nightmare to work with if we have nested objects
+- mongoDB is a not nice to work with if we have nested objects
 
 consider the following schema
 
@@ -53,3 +53,19 @@ Proj = {
 
   Do not use the positional operator $ with upsert operations because inserts will use the $ as a field name in the inserted document.
   ```
+
+  - type asserting in Golang
+    e.g. supposed the return type is interface{} but you are expecting somehexstring
+    ```go
+    someString, err := someFunction()
+    stringToByteFunction(someString) // << produces error
+    ```
+    ```console
+    cannot use someString (variable of type interface{}) as string value in argument for stringToByteFunction: need type assertion
+    ```
+
+    to carry out type assertion we do the following
+    ```go
+    someString, err := someFunction().(string)
+    stringToByteFunction(someString) 
+    ```
