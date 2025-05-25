@@ -104,6 +104,20 @@ func (ms *MongoStore) GetAllProjs() ([]models.PROJECT, error) {
 	return projs, nil
 }
 
+func (ms *MongoStore) GetAllTodos() ([]models.TODO, error) {
+	projs, err := ms.GetAllProjs()
+	if err != nil {
+		return []models.TODO{}, err
+	}
+	todos := []models.TODO{}
+	for i := range projs {
+		for _, todo := range projs[i].Tasks {
+			todos = append(todos, todo)
+		}
+	}
+	return todos, nil
+}
+
 func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (*mongo.UpdateResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()

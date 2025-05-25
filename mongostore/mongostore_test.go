@@ -145,6 +145,29 @@ func (ts *TestSuite) TestGetAllProjs() {
 	}
 }
 
+func (ts *TestSuite) TestGetAllTodos() {
+	got, err := ts.server.store.GetAllTodos()
+	if err != nil {
+		ts.FailNowf("err on GetAllProjs: ", err.Error())
+	}
+
+	objID1, _ := bson.ObjectIDFromHex("67bc5c4f1e8db0c9a17efca0")
+	objID2, _ := bson.ObjectIDFromHex("67e0c98b2c3e82a398cdbb16")
+	objID4, _ := bson.ObjectIDFromHex("682996bc78d219298228c10a")
+	dueDate1 := time.Now().AddDate(0, 3, 0)
+	dueDate2 := time.Now().AddDate(0, 0, 3)
+	dueDate4 := time.Now().AddDate(0, 0, 3)
+
+	want := []models.TODO{
+		{ID: &objID1, Name: "Water Plants", Description: "Not too much water for aloe vera", DueDate: &dueDate1},
+		{ID: &objID2, Name: "Buy socks", Description: "No show socks", DueDate: &dueDate2},
+		{ID: &objID4, Name: "Test task 3", Description: "test description", DueDate: &dueDate4},
+	}
+	for i, todo := range want {
+		ts.compareTodoStructFields(todo, got[i])
+	}
+}
+
 func (ts *TestSuite) TestCreateProj() {
 	name := "new proj to be inserted"
 	tasks := []models.TODO{}
