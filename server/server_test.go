@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -295,15 +296,20 @@ func (ts *TestSuite) TestGetProjByID() {
 }
 
 func (ts *TestSuite) TestCreateNewProj() {
-	data := url.Values{
-		"ProjName": {"Test Project Name"},
+	project := models.PROJECT{
+		ProjName: "Test Project Name",
+		Tasks:    []models.TODO{},
 	}
-	reader := strings.NewReader(data.Encode())
 
-	request, _ := http.NewRequest(http.MethodPost, "/proj", reader)
+	jsonData, err := json.Marshal(project)
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
+
+	request, _ := http.NewRequest(http.MethodPost, "/proj", bytes.NewBuffer(jsonData))
 	response := httptest.NewRecorder()
 
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Content-Type", "application/json")
 
 	ts.server.ServeHTTP(response, request)
 
