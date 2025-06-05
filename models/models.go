@@ -31,6 +31,7 @@ type TODO struct {
 	Description string         `json:"description,omitempty"`
 	DueDate     *time.Time     `json:"dueDate,omitempty"`
 	Priority    string         `json:"priority,omitempty"`
+	Completed   bool           `json:"completed"`
 }
 
 type PROJECT struct {
