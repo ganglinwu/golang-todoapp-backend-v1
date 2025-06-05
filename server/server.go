@@ -29,6 +29,14 @@ type TodoServer struct {
 	http.Handler
 }
 
+const whitelist = "localhost:8080, localhost:8081, localhost:5173, localhost:5174"
+
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", whitelist)
+	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Content-Type, Authorization, X-Requested-With")
+}
+
 func NewTodoServer(store TodoStore) *TodoServer {
 	r := http.NewServeMux()
 	ts := &TodoServer{}
@@ -48,6 +56,7 @@ func NewTodoServer(store TodoStore) *TodoServer {
 }
 
 func (ts TodoServer) handleGetAllProjs(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	projs, err := ts.TodoStore.GetAllProjs()
 
 	switch err {
@@ -70,6 +79,7 @@ func (ts TodoServer) handleGetAllProjs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ts TodoServer) handleGetAllTodos(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	todos, err := ts.TodoStore.GetAllTodos()
 
 	switch err {
@@ -92,6 +102,7 @@ func (ts TodoServer) handleGetAllTodos(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ts TodoServer) handleGetProjByID(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	ID := r.PathValue("ID")
 	todo, err := ts.TodoStore.GetProjByID(ID)
 
@@ -114,6 +125,7 @@ func (ts TodoServer) handleGetProjByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ts TodoServer) handleCreateProj(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	err := r.ParseForm()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -135,6 +147,7 @@ func (ts TodoServer) handleCreateProj(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ts TodoServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	err := r.ParseForm()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -178,6 +191,7 @@ func (ts TodoServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ts TodoServer) handleUpdateProjNameByID(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	err := r.ParseForm()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -201,6 +215,7 @@ func (ts TodoServer) handleUpdateProjNameByID(w http.ResponseWriter, r *http.Req
 }
 
 func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	err := r.ParseForm()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -235,6 +250,7 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 }
 
 func (ts TodoServer) handleDeleteProjByID(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	err := r.ParseForm()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -255,6 +271,7 @@ func (ts TodoServer) handleDeleteProjByID(w http.ResponseWriter, r *http.Request
 }
 
 func (ts TodoServer) handleDeleteTodoByID(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	todoID := r.PathValue("ID")
 
 	updateResult, err := ts.TodoStore.DeleteTodoByID(todoID)
