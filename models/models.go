@@ -26,12 +26,13 @@ type MockTODO struct {
 	}
 */
 type TODO struct {
-	ID          *bson.ObjectID `json:"_id,omitempty"`
-	Name        string         `json:"name"`
-	Description string         `json:"description,omitempty"`
-	DueDate     *time.Time     `json:"dueDate,omitempty"`
-	Priority    string         `json:"priority,omitempty"`
-	Completed   bool           `json:"completed"`
+	ID            *bson.ObjectID `json:"_id,omitempty"`
+	Name          string         `json:"name"`
+	Description   string         `json:"description,omitempty"`
+	DueDate       *time.Time     `json:"dueDate,omitempty"`
+	DueDateString string         `json:"dueDateString,omitempty"`
+	Priority      string         `json:"priority,omitempty"`
+	Completed     bool           `json:"completed"`
 }
 
 type PROJECT struct {
