@@ -145,20 +145,20 @@ func (ts TodoServer) handleGetProjByID(w http.ResponseWriter, r *http.Request) {
 func (ts TodoServer) handleCreateProj(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 
-	projStruct := models.PROJECT{}
+	project := models.PROJECT{}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&projStruct)
+	err := decoder.Decode(&project)
 
 	tasks := []models.TODO{}
 
-	insertedID, err := ts.TodoStore.CreateProj(projStruct.ProjName, tasks)
+	insertedID, err := ts.TodoStore.CreateProj(project.ProjName, tasks)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "%s \n Sucessfully created proj \n ID: %s \n ProjName: %s \n Tasks: %#v \n", insertedID.Hex(), insertedID.Hex(), projStruct.ProjName, tasks)
+	fmt.Fprintf(w, "%s \n Sucessfully created proj \n ID: %s \n ProjName: %s \n Tasks: %#v \n", insertedID.Hex(), insertedID.Hex(), project.ProjName, tasks)
 }
 
 // handleCreateTodo
