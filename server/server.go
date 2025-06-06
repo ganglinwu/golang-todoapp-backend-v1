@@ -55,6 +55,9 @@ func NewTodoServer(store TodoStore) *TodoServer {
 	return ts
 }
 
+// handleGetAllProjs
+//
+// endpoint: "GET /proj"
 func (ts TodoServer) handleGetAllProjs(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	projs, err := ts.TodoStore.GetAllProjs()
@@ -78,6 +81,9 @@ func (ts TodoServer) handleGetAllProjs(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleGetAllTodos
+//
+// endpoint: "GET /todo"
 func (ts TodoServer) handleGetAllTodos(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	todos, err := ts.TodoStore.GetAllTodos()
@@ -101,6 +107,9 @@ func (ts TodoServer) handleGetAllTodos(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleGetProjByID
+//
+// endpoint: "GET /proj/{ID}"
 func (ts TodoServer) handleGetProjByID(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	ID := r.PathValue("ID")
@@ -152,6 +161,9 @@ func (ts TodoServer) handleCreateProj(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s \n Sucessfully created proj \n ID: %s \n ProjName: %s \n Tasks: %#v \n", insertedID.Hex(), insertedID.Hex(), projStruct.ProjName, tasks)
 }
 
+// handleCreateTodo
+//
+// endpoint: "POST /proj/{ID"
 func (ts TodoServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	err := r.ParseForm()
@@ -196,6 +208,9 @@ func (ts TodoServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// handleUpdateProjNameByID
+//
+// endpoint: "PATCH /proj/{ID}"
 func (ts TodoServer) handleUpdateProjNameByID(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	err := r.ParseForm()
@@ -220,6 +235,9 @@ func (ts TodoServer) handleUpdateProjNameByID(w http.ResponseWriter, r *http.Req
 	return
 }
 
+// handleUpdateTodoByID
+//
+// endpoint: "PATCH /todo/{ID}"
 func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	err := r.ParseForm()
@@ -255,6 +273,9 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 	return
 }
 
+// handleDeleteProjByID
+//
+// endpoint: "DELETE /proj/{ID}"
 func (ts TodoServer) handleDeleteProjByID(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	err := r.ParseForm()
@@ -276,6 +297,9 @@ func (ts TodoServer) handleDeleteProjByID(w http.ResponseWriter, r *http.Request
 	return
 }
 
+// handleDeleteTodoByID
+//
+// endpoint: "DELETE /todo/{ID}"
 func (ts TodoServer) handleDeleteTodoByID(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	todoID := r.PathValue("ID")
