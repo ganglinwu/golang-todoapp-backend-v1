@@ -237,3 +237,29 @@ func (ms *MongoStore) DeleteTodoByID(TodoID string) (*mongo.UpdateResult, error)
 	}
 	return updateResult, nil
 }
+
+func (ms *MongoStore) GetTodoByID(TodoID string) (models.TODO, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	todoID, err := bson.ObjectIDFromHex(TodoID)
+	if err != nil {
+		return models.TODO{}, err
+	}
+
+	projThatContainsTodo := models.PROJECT{}
+
+	query := bson.D{{"tasks._id", &todoID}}
+
+	err = ms.Collection.FindOne(ctx, query).Decode(&projThatContainsTodo)
+	if err != nil {
+		return models.TODO{}, err
+	}
+
+	for _, todo := range projThatContainsTodo.Tasks {
+		if todo.ID.Hex() == TodoID {
+			return todo, nil
+		}
+	}
+	return models.TODO{}, errs.ErrNotFound
+}

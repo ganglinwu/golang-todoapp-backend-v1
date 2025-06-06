@@ -299,3 +299,16 @@ func (ts *TestSuite) TestDeleteTodoByID() {
 
 	ts.Equal(want, got)
 }
+
+func (ts *TestSuite) TestGetTodoByID() {
+	objID4, _ := bson.ObjectIDFromHex("682996bc78d219298228c10a")
+	dueDate4 := time.Now().AddDate(0, 0, 3)
+	ID := "682996bc78d219298228c10a"
+	todo, err := ts.server.store.GetTodoByID(ID)
+	if err != nil {
+		ts.FailNowf("err on GetTodoByID: ", err.Error())
+	}
+	got := todo
+	want := models.TODO{ID: &objID4, Name: "Test task 3", Description: "test description", DueDate: &dueDate4}
+	ts.compareTodoStructFields(want, got)
+}
