@@ -335,18 +335,23 @@ func (ts *TestSuite) TestCreateTodo() {
 	// reset seeded data
 	ts.SetupTest()
 
-	data := url.Values{
-		"Name":        {"Newly Created Task"},
-		"Description": {"Newly Created Description"},
-		"DueDate":     {"2020-03-20T02:00:00+08:00"},
-		"Priority":    {"high"},
+	todoToCreate := models.TODO{
+		Name:          "Newly Created Task",
+		Description:   "Newly Created Description",
+		DueDateString: "2020-03-20T02:00:00+08:00",
+		Priority:      "high",
+		Completed:     false,
 	}
-	reader := strings.NewReader(data.Encode())
 
-	request, _ := http.NewRequest(http.MethodPost, "/proj/68299585e7b6718ddf79b567", reader)
+	jsonData, err := json.Marshal(todoToCreate)
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
+
+	request, _ := http.NewRequest(http.MethodPost, "/proj/68299585e7b6718ddf79b567", bytes.NewBuffer(jsonData))
 	responseRecorder := httptest.NewRecorder()
 
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Content-Type", "application/json")
 
 	ts.server.ServeHTTP(responseRecorder, request)
 

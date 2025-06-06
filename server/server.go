@@ -175,39 +175,47 @@ func (ts TodoServer) handleCreateProj(w http.ResponseWriter, r *http.Request) {
 // endpoint: "POST /proj/{ID"
 func (ts TodoServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
-	err := r.ParseForm()
+	todo := models.TODO{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&todo)
 	if err != nil {
+		log.Println("failed to unmarshal json to TODO struct: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 
 	projID := r.PathValue("ID")
-	dueDate, err := time.Parse(time.RFC3339, r.FormValue("DueDate"))
+	dueDate, err := time.Parse(time.RFC3339, todo.DueDateString)
 	if err != nil {
+		log.Println("failed to parse date string to date: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 
 	newTodoWithoutID := models.TODO{
-		Name:        r.FormValue("Name"),
-		Description: r.FormValue("Description"),
+		Name:        todo.Name,
+		Description: todo.Description,
 		DueDate:     &dueDate,
-		Priority:    r.FormValue("Priority"),
+		Priority:    todo.Priority,
+		Completed:   todo.Completed,
 	}
 	updateResult, err := ts.TodoStore.CreateTodo(projID, newTodoWithoutID)
 	if err != nil {
+		log.Println("failed to create todo on data store: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 	if updateResult.MatchedCount != 1 {
+		log.Println("data store did not match query: ", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "we could not find the project, thus was unable to create a new todo")
 		return
 	}
 	if updateResult.UpsertedCount != 1 {
+		log.Println("data store could not upsert todo: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "something went wrong on our end, please try again later.")
 		return
