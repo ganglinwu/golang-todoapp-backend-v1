@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -148,15 +149,23 @@ func (ts TodoServer) handleCreateProj(w http.ResponseWriter, r *http.Request) {
 	project := models.PROJECT{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&project)
+	if err != nil {
+		log.Println("failed to unmarshal json to TODO struct: ", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return
+	}
 
 	tasks := []models.TODO{}
 
 	insertedID, err := ts.TodoStore.CreateProj(project.ProjName, tasks)
 	if err != nil {
+		log.Println("failed to create proj on data store: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
+	log.Printf("Sucessfully created proj \n ID: %s \n ProjName: %s \n Tasks: %#v \n", insertedID.Hex(), project.ProjName, tasks)
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "%s \n Sucessfully created proj \n ID: %s \n ProjName: %s \n Tasks: %#v \n", insertedID.Hex(), insertedID.Hex(), project.ProjName, tasks)
 }
