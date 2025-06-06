@@ -230,23 +230,28 @@ func (ts TodoServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
 // endpoint: "PATCH /proj/{ID}"
 func (ts TodoServer) handleUpdateProjNameByID(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
-	err := r.ParseForm()
+	updatedProj := models.PROJECT{}
+
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&updatedProj)
 	if err != nil {
+		log.Println("failed to unmarshal json to PROJECT struct: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 
 	ID := r.PathValue("ID")
-	newProjName := r.FormValue("ProjName")
+	newProjName := updatedProj.ProjName
 
 	err = ts.TodoStore.UpdateProjNameByID(ID, newProjName)
 	if err != nil {
+		log.Println("failed to update proj name on data store: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
-
+	log.Printf("Sucessfully updated proj name \n ID: %s \n ProjName: %s \n", ID, newProjName)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "\n Sucessfully updated proj name \n ID: %s \n ProjName: %s \n", ID, newProjName)
 	return

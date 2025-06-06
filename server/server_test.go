@@ -396,13 +396,16 @@ func (ts *TestSuite) TestCreateTodo() {
 }
 
 func (ts *TestSuite) TestUpdateProjNameByID() {
-	data := url.Values{
-		"ProjName": {"Updated Proj Name"},
+	updatedProj := models.PROJECT{
+		ProjName: "Updated Proj Name",
 	}
 
-	reader := strings.NewReader(data.Encode())
+	jsonData, err := json.Marshal(updatedProj)
+	if err != nil {
+		ts.FailNow(err.Error())
+	}
 
-	request, _ := http.NewRequest(http.MethodPatch, "/proj/68299585e7b6718ddf79b567", reader)
+	request, _ := http.NewRequest(http.MethodPatch, "/proj/68299585e7b6718ddf79b567", bytes.NewBuffer(jsonData))
 	responseRecorder := httptest.NewRecorder()
 
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
