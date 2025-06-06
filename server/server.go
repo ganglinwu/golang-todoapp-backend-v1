@@ -273,7 +273,7 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 	updatedTodo := models.TODO{}
 
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&updatedProj)
+	err := decoder.Decode(&updatedTodo)
 	if err != nil {
 		log.Println("failed to unmarshal json to TODO struct: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -302,15 +302,16 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 		todoDescription = updatedTodo.Description
 	}
 
-	todoDueDate := currentTodo.dueDate
-	if todo.DueDateString != "" {
-		todoDueDate, err := time.Parse(time.RFC3339, todo.DueDateString)
+	todoDueDate := currentTodo.DueDate
+	if updatedTodo.DueDateString != "" {
+		newDueDate, err := time.Parse(time.RFC3339, updatedTodo.DueDateString)
 		if err != nil {
-		  log.Println("failed to parse date string: ", err.Error())
+			log.Println("failed to parse date string: ", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "%s", err.Error())
 			return
 		}
+		todoDueDate = &newDueDate
 	}
 
 	todoPriority := ""
@@ -325,12 +326,12 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 	updatedTodoWithoutID := models.TODO{
 		Name:        todoName,
 		Description: todoDescription,
-		DueDate:     &todoDueDate,
+		DueDate:     todoDueDate,
 		Priority:    todoPriority,
 		Completed:   todoCompleted,
 	}
 
-	err = ts.TodoStore.UpdateTodoByID(ID, newTodoWithoutID)
+	err = ts.TodoStore.UpdateTodoByID(todoID, updatedTodoWithoutID)
 	if err != nil {
 		log.Println("failed to update todo by id: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -338,8 +339,8 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-  log.Printf("Sucessfully updated todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s \n Priority: %s \n Completed: %b \n", todoID, updatedTodoWithoutID.Name, updatedTodoWithoutID.Description, r.FormValue("DueDate"), updatedTodoWithoutID.Priority, updatedTodoWithoutID.Completed)
-	fmt.Fprintf(w, "\n Sucessfully updated todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s \n Priority: %s \n Completed %b \n", todoID, updatedTodoWithoutID.Name, updatedTodoWithoutID.Description, r.FormValue("DueDate"), updatedTodoWithoutID.Priority, updatedTodoWithoutID.Completed))
+	log.Printf("Sucessfully updated todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s \n Priority: %s \n Completed: %t \n", todoID, updatedTodoWithoutID.Name, updatedTodoWithoutID.Description, r.FormValue("DueDate"), updatedTodoWithoutID.Priority, updatedTodoWithoutID.Completed)
+	fmt.Fprintf(w, "\n Sucessfully updated todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s \n Priority: %s \n Completed %t \n", todoID, updatedTodoWithoutID.Name, updatedTodoWithoutID.Description, r.FormValue("DueDate"), updatedTodoWithoutID.Priority, updatedTodoWithoutID.Completed)
 	return
 }
 
@@ -348,12 +349,6 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 // endpoint: "DELETE /proj/{ID}"
 func (ts TodoServer) handleDeleteProjByID(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
-	err := r.ParseForm()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%s", err.Error())
-		return
-	}
 	ID := r.PathValue("ID")
 
 	deleteResult, err := ts.TodoStore.DeleteProjByID(ID)

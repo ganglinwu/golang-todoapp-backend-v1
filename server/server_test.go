@@ -184,8 +184,8 @@ func (s *StubTodoStore) GetTodoByID(todoID string) (models.TODO, error) {
 	if len(s.store) == 0 {
 		return models.TODO{}, errs.ErrNotFound
 	}
-	for projIndex, proj := range s.store {
-		for taskIndex, task := range proj.Tasks {
+	for _, proj := range s.store {
+		for _, task := range proj.Tasks {
 			if task.ID.Hex() == todoID {
 				return task, nil
 			}
