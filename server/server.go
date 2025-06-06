@@ -23,6 +23,7 @@ type TodoStore interface {
 	UpdateTodoByID(todoID string, newTodoWithoutID models.TODO) error
 	DeleteProjByID(ID string) (*mongo.DeleteResult, error)
 	DeleteTodoByID(todoID string) (*mongo.UpdateResult, error)
+	GetTodoByID(todoID string) (models.TODO, error)
 }
 
 type TodoServer struct {
@@ -260,38 +261,85 @@ func (ts TodoServer) handleUpdateProjNameByID(w http.ResponseWriter, r *http.Req
 // handleUpdateTodoByID
 //
 // endpoint: "PATCH /todo/{ID}"
+//
+// - handleUpdateTodoByID will take in the updatedTodo through json
+// - then it will search data store for existing todo under the ID
+// - compares the fields
+// - if the updatedTodo has blank fields, the existing field will be used
+// - else it supercedes existing field
 func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
-	err := r.ParseForm()
+
+	updatedTodo := models.TODO{}
+
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&updatedProj)
 	if err != nil {
+		log.Println("failed to unmarshal json to TODO struct: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 
-	ID := r.PathValue("ID")
-	dueDate, err := time.Parse(time.RFC3339, r.FormValue("DueDate"))
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%s", err.Error())
-		return
+	todoID := r.PathValue("ID")
+
+	currentTodo, err := ts.TodoStore.GetTodoByID(todoID)
+
+	// check and update
+
+	// Name should never be empty
+	todoName := ""
+	if updatedTodo.Name == "" {
+		todoName = currentTodo.Name
+	} else {
+		todoName = updatedTodo.Name
 	}
 
-	newTodoWithoutID := models.TODO{
-		Name:        r.FormValue("Name"),
-		Description: r.FormValue("Description"),
-		DueDate:     &dueDate,
-		Priority:    r.FormValue("Priority"),
+	todoDescription := ""
+	if updatedTodo.Description == "" {
+		todoDescription = currentTodo.Description
+	} else {
+		todoDescription = updatedTodo.Description
+	}
+
+	todoDueDate := currentTodo.dueDate
+	if todo.DueDateString != "" {
+		todoDueDate, err := time.Parse(time.RFC3339, todo.DueDateString)
+		if err != nil {
+		  log.Println("failed to parse date string: ", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err.Error())
+			return
+		}
+	}
+
+	todoPriority := ""
+	if updatedTodo.Priority == "" {
+		todoPriority = currentTodo.Priority
+	} else {
+		todoPriority = updatedTodo.Priority
+	}
+
+	todoCompleted := updatedTodo.Completed
+
+	updatedTodoWithoutID := models.TODO{
+		Name:        todoName,
+		Description: todoDescription,
+		DueDate:     &todoDueDate,
+		Priority:    todoPriority,
+		Completed:   todoCompleted,
 	}
 
 	err = ts.TodoStore.UpdateTodoByID(ID, newTodoWithoutID)
 	if err != nil {
+		log.Println("failed to update todo by id: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "\n Sucessfully updated todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s \n Priority: %s \n", ID, newTodoWithoutID.Name, newTodoWithoutID.Description, r.FormValue("DueDate"), newTodoWithoutID.Priority)
+  log.Printf("Sucessfully updated todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s \n Priority: %s \n Completed: %b \n", todoID, updatedTodoWithoutID.Name, updatedTodoWithoutID.Description, r.FormValue("DueDate"), updatedTodoWithoutID.Priority, updatedTodoWithoutID.Completed)
+	fmt.Fprintf(w, "\n Sucessfully updated todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s \n Priority: %s \n Completed %b \n", todoID, updatedTodoWithoutID.Name, updatedTodoWithoutID.Description, r.FormValue("DueDate"), updatedTodoWithoutID.Priority, updatedTodoWithoutID.Completed))
 	return
 }
 

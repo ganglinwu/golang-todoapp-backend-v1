@@ -7,9 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -180,6 +178,20 @@ func (s *StubTodoStore) DeleteTodoByID(todoID string) (*mongo.UpdateResult, erro
 		}
 	}
 	return &mongo.UpdateResult{MatchedCount: 0, ModifiedCount: 0, UpsertedCount: 0}, errs.ErrNotFound
+}
+
+func (s *StubTodoStore) GetTodoByID(todoID string) (models.TODO, error) {
+	if len(s.store) == 0 {
+		return models.TODO{}, errs.ErrNotFound
+	}
+	for projIndex, proj := range s.store {
+		for taskIndex, task := range proj.Tasks {
+			if task.ID.Hex() == todoID {
+				return task, nil
+			}
+		}
+	}
+	return models.TODO{}, errs.ErrNotFound
 }
 
 func (s *StubTodoStore) UpdateTodoByID(ID string, newTodoWithoutID models.TODO) error {
@@ -426,19 +438,22 @@ func (ts *TestSuite) TestUpdateTodoByID() {
 	// reset seeded data
 	ts.SetupTest()
 
-	data := url.Values{
-		"Name":        {"Updated Task"},
-		"Description": {"Updated Description"},
-		"DueDate":     {"2025-03-20T02:00:00+08:00"},
-		"Priority":    {"low"},
+	todoToUpdate := models.TODO{
+		Name:          "Updated Task",
+		Description:   "Updated Description",
+		DueDateString: "2025-03-20T02:00:00+08:00",
+		Priority:      "low",
+		Completed:     false,
+	}
+	jsonData, err := json.Marshal(todoToUpdate)
+	if err != nil {
+		ts.FailNow(err.Error())
 	}
 
-	reader := strings.NewReader(data.Encode())
-
-	request, _ := http.NewRequest(http.MethodPatch, "/todo/682996bc78d219298228c10a", reader)
+	request, _ := http.NewRequest(http.MethodPatch, "/todo/682996bc78d219298228c10a", bytes.NewBuffer(jsonData))
 	responseRecorder := httptest.NewRecorder()
 
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Content-Type", "application/json")
 
 	ts.server.ServeHTTP(responseRecorder, request)
 
