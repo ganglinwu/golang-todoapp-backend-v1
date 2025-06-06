@@ -323,20 +323,3 @@ func (ts TodoServer) handleDeleteTodoByID(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 	return
 }
-
-/*
-func handleErrAsHTTP501(w http.ResponseWriter, e error) {
-	if e != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%s", e.Error())
-		return
-	}
-}
-
-func handleErrAsHTTP400(w http.ResponseWriter, e error) {
-	if e != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-}
-*/
