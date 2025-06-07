@@ -31,12 +31,24 @@ type TodoServer struct {
 	http.Handler
 }
 
-const whitelist = "localhost:8080, localhost:8081, localhost:5173, localhost:5174"
+const whitelist = "http://localhost:5173"
 
 func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", whitelist)
-	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
 	(*w).Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Content-Type, Authorization, X-Requested-With")
+}
+
+// function to handle pre flight request
+func handlePreFlight(w http.ResponseWriter, r *http.Request) {
+	// we already know http.Request.Method == "OPTIONS"
+	if r.Header.Get("Access-Control-Request-Method") != "" {
+		w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Content-Type, Authorization, X-Requested-With")
+		return
+	}
+	return
 }
 
 func NewTodoServer(store TodoStore) *TodoServer {
@@ -49,6 +61,7 @@ func NewTodoServer(store TodoStore) *TodoServer {
 	r.HandleFunc("GET /todo", ts.handleGetAllTodos)
 	r.HandleFunc("GET /proj/{ID}", ts.handleGetProjByID)
 	r.HandleFunc("POST /proj", ts.handleCreateProj)
+	r.HandleFunc("OPTIONS /proj/{ID}", handlePreFlight)
 	r.HandleFunc("POST /proj/{ID}", ts.handleCreateTodo)
 	r.HandleFunc("PATCH /proj/{ID}", ts.handleUpdateProjNameByID)
 	r.HandleFunc("PATCH /todo/{ID}", ts.handleUpdateTodoByID)
