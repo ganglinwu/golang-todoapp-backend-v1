@@ -122,9 +122,12 @@ func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (*
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	query := bson.D{{"_id", projID}}
+	objID, err := bson.ObjectIDFromHex(projID)
+	if err != nil {
+		return nil, err
+	}
 
-	update := bson.D{{Key: "$set", Value: bson.D{{"tasks", newTodoWithoutID}}}}
+	query := bson.D{{"_id", &objID}}
 
 	opts := options.UpdateOne().SetUpsert(true)
 
