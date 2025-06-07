@@ -134,6 +134,9 @@ func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (*
 
 	// add ID onto newTodoWithoutID
 	newTodoWithoutID.ID = &todoID
+
+	update := bson.D{{Key: "$push", Value: bson.D{{"tasks", newTodoWithoutID}}}}
+
 	opts := options.UpdateOne().SetUpsert(true)
 
 	result, err := ms.Collection.UpdateOne(ctx, query, update, opts)
