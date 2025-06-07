@@ -129,6 +129,11 @@ func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (*
 
 	query := bson.D{{"_id", &objID}}
 
+	// generate new ObjectID for created todo
+	todoID := bson.NewObjectID()
+
+	// add ID onto newTodoWithoutID
+	newTodoWithoutID.ID = &todoID
 	opts := options.UpdateOne().SetUpsert(true)
 
 	result, err := ms.Collection.UpdateOne(ctx, query, update, opts)
