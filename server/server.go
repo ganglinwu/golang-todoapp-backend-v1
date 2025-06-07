@@ -186,7 +186,7 @@ func (ts TodoServer) handleCreateProj(w http.ResponseWriter, r *http.Request) {
 
 // handleCreateTodo
 //
-// endpoint: "POST /proj/{ID"
+// endpoint: "POST /proj/{ID}"
 func (ts TodoServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	todo := models.TODO{}
@@ -223,17 +223,19 @@ func (ts TodoServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if updateResult.MatchedCount != 1 {
-		log.Println("data store did not match query: ", err.Error())
+		log.Println("data store did not match query, updateResult.MatchedCount: ", updateResult.MatchedCount)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "we could not find the project, thus was unable to create a new todo")
 		return
 	}
-	if updateResult.UpsertedCount != 1 {
-		log.Println("data store could not upsert todo: ", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, "something went wrong on our end, please try again later.")
-		return
-	}
+	/*
+		if updateResult.UpsertedCount != 1 {
+			log.Println("data store could not upsert todo: ", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "something went wrong on our end, please try again later.")
+			return
+		}
+	*/
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "%s\n Successfully created todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s \n Priority: %s \n", updateResult.UpsertedID, updateResult.UpsertedID, r.FormValue("Name"), r.FormValue("Description"), r.FormValue("DueDate"), r.FormValue("Priority"))
 	return
