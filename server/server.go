@@ -90,7 +90,6 @@ func (ts TodoServer) handleGetAllProjs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "err: %s", err.Error())
@@ -129,21 +128,20 @@ func (ts TodoServer) handleGetAllTodos(w http.ResponseWriter, r *http.Request) {
 func (ts TodoServer) handleGetProjByID(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	ID := r.PathValue("ID")
-	todo, err := ts.TodoStore.GetProjByID(ID)
+	proj, err := ts.TodoStore.GetProjByID(ID)
 
 	switch err {
 	case errs.ErrNotFound:
 		w.WriteHeader(http.StatusNotFound)
 	case nil:
 		w.Header().Set("Content-Type", "application/json")
-		err := json.NewEncoder(w).Encode(todo)
+		err := json.NewEncoder(w).Encode(proj)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "%s", err.Error())
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 	}
