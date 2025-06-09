@@ -142,7 +142,6 @@ func (ts TodoServer) handleGetProjByID(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "%s", err.Error())
 			return
 		}
-
 	default:
 		log.Println("handleGetProjByID failed with error", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
