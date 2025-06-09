@@ -137,12 +137,14 @@ func (ts TodoServer) handleGetProjByID(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		err := json.NewEncoder(w).Encode(proj)
 		if err != nil {
+			log.Println("handleGetProjByID failed to encode into json:", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "%s", err.Error())
 			return
 		}
 
 	default:
+		log.Println("handleGetProjByID failed with error", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
