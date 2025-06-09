@@ -347,12 +347,15 @@ func (ts *TestSuite) TestCreateTodo() {
 	// reset seeded data
 	ts.SetupTest()
 
+	timestamp := bson.Timestamp{T: uint32(time.Now().Unix())}
+
 	todoToCreate := models.TODO{
 		Name:          "Newly Created Task",
 		Description:   "Newly Created Description",
 		DueDateString: "2020-03-20T02:00:00+08:00",
 		Priority:      "high",
 		Completed:     false,
+		Updated_at:    &timestamp,
 	}
 
 	jsonData, err := json.Marshal(todoToCreate)
@@ -402,6 +405,8 @@ func (ts *TestSuite) TestCreateTodo() {
 		Description: "Newly Created Description",
 		DueDate:     &dueDate,
 		Priority:    "high",
+		Completed:   false,
+		Updated_at:  &timestamp,
 	})
 
 	ts.compareProjStructFields(want, got)
@@ -438,12 +443,15 @@ func (ts *TestSuite) TestUpdateTodoByID() {
 	// reset seeded data
 	ts.SetupTest()
 
+	timestamp := bson.Timestamp{T: uint32(time.Now().Unix())}
+
 	todoToUpdate := models.TODO{
 		Name:          "Updated Task",
 		Description:   "Updated Description",
 		DueDateString: "2025-03-20T02:00:00+08:00",
 		Priority:      "low",
 		Completed:     false,
+		Updated_at:    &timestamp,
 	}
 	jsonData, err := json.Marshal(todoToUpdate)
 	if err != nil {
@@ -471,10 +479,9 @@ func (ts *TestSuite) TestUpdateTodoByID() {
 		ID:       &objID5,
 		ProjName: "proj2",
 		Tasks: []models.TODO{
-			{ID: &objID4, Name: "Updated Task", Description: "Updated Description", DueDate: &wantDueDate, Priority: "low"},
+			{ID: &objID4, Name: "Updated Task", Description: "Updated Description", DueDate: &wantDueDate, Priority: "low", Updated_at: &timestamp},
 		},
 	}
-
 	ts.compareProjStructFields(want, got)
 }
 

@@ -214,6 +214,7 @@ func (ts TodoServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
 		DueDate:     &dueDate,
 		Priority:    todo.Priority,
 		Completed:   todo.Completed,
+		Updated_at:  &bson.Timestamp{T: uint32(time.Now().Unix())},
 	}
 	updateResult, err := ts.TodoStore.CreateTodo(projID, newTodoWithoutID)
 	if err != nil {
@@ -344,6 +345,7 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 		DueDate:     todoDueDate,
 		Priority:    todoPriority,
 		Completed:   todoCompleted,
+		Updated_at:  &bson.Timestamp{T: uint32(time.Now().Unix())},
 	}
 
 	err = ts.TodoStore.UpdateTodoByID(todoID, updatedTodoWithoutID)
