@@ -62,6 +62,7 @@ func NewTodoServer(store TodoStore) *TodoServer {
 	r.HandleFunc("GET /proj/{ID}", ts.handleGetProjByID)
 	r.HandleFunc("POST /proj", ts.handleCreateProj)
 	r.HandleFunc("OPTIONS /proj/{ID}", handlePreFlight)
+	r.HandleFunc("OPTIONS /todo/{ID}", handlePreFlight)
 	r.HandleFunc("POST /proj/{ID}", ts.handleCreateTodo)
 	r.HandleFunc("PATCH /proj/{ID}", ts.handleUpdateProjNameByID)
 	r.HandleFunc("PATCH /todo/{ID}", ts.handleUpdateTodoByID)
