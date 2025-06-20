@@ -200,19 +200,23 @@ func (ts TodoServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newTodoWithoutID := models.TODO{}
+
 	projID := r.PathValue("ID")
-	dueDate, err := time.Parse(time.RFC3339, todo.DueDateString)
-	if err != nil {
-		log.Println("failed to parse date string to date: ", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%s", err.Error())
-		return
+	if todo.DueDateString != "" {
+		dueDate, err := time.Parse(time.RFC3339, todo.DueDateString)
+		if err != nil {
+			log.Println("failed to parse date string to date: ", err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err.Error())
+			return
+		}
+		newTodoWithoutID.DueDate = &dueDate
 	}
 
-	newTodoWithoutID := models.TODO{
+	newTodoWithoutID = models.TODO{
 		Name:        todo.Name,
 		Description: todo.Description,
-		DueDate:     &dueDate,
 		Priority:    todo.Priority,
 		Completed:   todo.Completed,
 		Updated_at:  &bson.Timestamp{T: uint32(time.Now().Unix())},
