@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 
@@ -9,6 +10,9 @@ import (
 )
 
 func main() {
+	addr := flag.String("addr", ":8080", "http address")
+
+	flag.Parse()
 	conn, err := mongostore.NewConnection()
 	if err != nil {
 		log.Fatal(err)
