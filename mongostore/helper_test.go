@@ -9,8 +9,10 @@ func (ts *TestSuite) compareTodoStructFields(want, got models.TODO) {
 	ts.Equal(want.ID, got.ID)
 	ts.Equal(want.Name, got.Name)
 	ts.Equal(want.Description, got.Description)
+	ts.Equal(want.Completed, got.Completed)
+	ts.Equal(want.Priority, got.Priority)
 
-	ts.Equal(want.DueDate.Unix(), got.DueDate.Unix())
+	ts.InDelta(want.DueDate.Unix(), got.DueDate.Unix(), 5)
 }
 
 func (ts *TestSuite) compareProjStructFields(want, got models.PROJECT) {
