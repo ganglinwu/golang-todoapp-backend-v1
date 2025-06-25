@@ -26,18 +26,22 @@ type MockTODO struct {
 	}
 */
 type TODO struct {
-	ID            *bson.ObjectID  `json:"_id,omitempty"`
-	Name          string          `json:"name"`
-	Description   string          `json:"description,omitempty"`
-	DueDate       *time.Time      `json:"dueDate,omitempty"`
-	DueDateString string          `json:"dueDateString,omitempty"`
-	Priority      string          `json:"priority,omitempty"`
-	Completed     bool            `json:"completed"`
-	Updated_at    *bson.Timestamp `json:"updated_at"`
+	ID            *bson.ObjectID  `json:"_id,omitempty" db:"-"` // mongodb id
+	Id            int             `json:"-" db:"id"`            // postgresql id
+	Name          string          `json:"name" db:"name"`
+	Description   string          `json:"description,omitempty" db:"description"`
+	DueDate       *time.Time      `json:"dueDate,omitempty" db:"duedate"`
+	DueDateString string          `json:"dueDateString,omitempty" db:"-"`
+	Priority      string          `json:"priority,omitempty" db:"priority"`
+	Completed     bool            `json:"completed" db:"completed"`
+	Updated_at    *bson.Timestamp `json:"updated_at" db:"-"`
+	Updated_At    *time.Time      `json:"-" db:"updated_at`
+	ProjName      string          `json:"-" db:"projname"`
 }
 
 type PROJECT struct {
-	ID       *bson.ObjectID `json:"_id,omitempty"`
-	ProjName string         `json:"projname"`
-	Tasks    []TODO         `json:"tasks"`
+	ID       *bson.ObjectID `json:"_id,omitempty" db:"-"`
+	Id       int            `json:"-" db:"id"`
+	ProjName string         `json:"projname" db:"projname"`
+	Tasks    []TODO         `json:"tasks" db:"-"`
 }
