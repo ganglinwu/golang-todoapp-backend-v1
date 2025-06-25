@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -113,19 +114,21 @@ func (s *StubTodoStore) GetProjByID(ID string) (models.PROJECT, error) {
 	return models.PROJECT{}, errs.ErrNotFound
 }
 
-func (s *StubTodoStore) CreateProj(Name string, Tasks []models.TODO) (*bson.ObjectID, error) {
+func (s *StubTodoStore) CreateProj(Name string, Tasks []models.TODO) (string, error) {
 	randomObjID := bson.NewObjectID()
+	IDstr := randomObjID.Hex()
 	s.store = append(s.store, models.PROJECT{ID: &randomObjID, ProjName: Name, Tasks: Tasks})
-	return &randomObjID, nil
+	return IDstr, nil
 }
 
-func (s *StubTodoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (*mongo.UpdateResult, error) {
+func (s *StubTodoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (interface{}, error) {
 	if len(s.store) == 0 {
-		return &mongo.UpdateResult{MatchedCount: 0, ModifiedCount: 0, UpsertedCount: 0}, errs.ErrNotFound
+		return nil, errs.ErrNotFound
 	}
 	for projIndex, proj := range s.store {
 		if proj.ID.Hex() == projID {
 			taskID := bson.NewObjectID()
+			upsertedID := taskID.Hex()
 			s.store[projIndex].Tasks = append(s.store[projIndex].Tasks, models.TODO{
 				ID:          &taskID,
 				Name:        newTodoWithoutID.Name,
@@ -133,10 +136,10 @@ func (s *StubTodoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) 
 				DueDate:     newTodoWithoutID.DueDate,
 				Priority:    newTodoWithoutID.Priority,
 			})
-			return &mongo.UpdateResult{MatchedCount: 1, ModifiedCount: 1, UpsertedCount: 1, UpsertedID: taskID.Hex()}, nil
+			return upsertedID, nil
 		}
 	}
-	return &mongo.UpdateResult{MatchedCount: 0, ModifiedCount: 0, UpsertedCount: 0}, errs.ErrNotFound
+	return nil, errs.ErrNotFound
 }
 
 func (s *StubTodoStore) UpdateProjNameByID(ID, NewName string) error {
@@ -318,7 +321,7 @@ func (ts *TestSuite) TestCreateNewProj() {
 		ts.FailNow(err.Error())
 	}
 
-	request, _ := http.NewRequest(http.MethodPost, "/proj", bytes.NewBuffer(jsonData))
+	request, _ := http.NewRequest(http.MethodPost, "/proj/", bytes.NewBuffer(jsonData))
 	response := httptest.NewRecorder()
 
 	request.Header.Set("Content-Type", "application/json")
@@ -337,7 +340,6 @@ func (ts *TestSuite) TestCreateNewProj() {
 	if err != nil {
 		ts.FailNow(err.Error())
 	}
-
 	want := models.PROJECT{ID: &insertedObjID, ProjName: "Test Project Name", Tasks: []models.TODO{}}
 
 	ts.compareProjStructFields(want, got)
@@ -383,6 +385,7 @@ func (ts *TestSuite) TestCreateTodo() {
 	ts.assertStatusCode(201, responseRecorder.Code)
 
 	insertedIDString := string(byteGot)[:24]
+	log.Println("debug bytegot", string(byteGot))
 
 	insertedObjID, err := bson.ObjectIDFromHex(insertedIDString)
 	if err != nil {

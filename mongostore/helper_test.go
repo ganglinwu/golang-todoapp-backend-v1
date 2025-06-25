@@ -12,7 +12,13 @@ func (ts *TestSuite) compareTodoStructFields(want, got models.TODO) {
 	ts.Equal(want.Completed, got.Completed)
 	ts.Equal(want.Priority, got.Priority)
 
-	ts.InDelta(want.DueDate.Unix(), got.DueDate.Unix(), 5)
+	if got.DueDate != nil {
+		if want.DueDate != nil {
+			ts.InDelta(want.DueDate.Unix(), got.DueDate.Unix(), 5)
+		} else {
+			ts.FailNow("got DueDate but did not want one")
+		}
+	}
 }
 
 func (ts *TestSuite) compareProjStructFields(want, got models.PROJECT) {

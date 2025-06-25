@@ -180,9 +180,9 @@ func (ts TodoServer) handleCreateProj(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
-	log.Printf("Sucessfully created proj \n ID: %s \n ProjName: %s \n Tasks: %#v \n", insertedID.Hex(), project.ProjName, tasks)
+	log.Printf("Sucessfully created proj \n ID: %s \n ProjName: %s \n Tasks: %#v \n", insertedID, project.ProjName, tasks)
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "%s \n Sucessfully created proj \n ID: %s \n ProjName: %s \n Tasks: %#v \n", insertedID.Hex(), insertedID.Hex(), project.ProjName, tasks)
+	fmt.Fprintf(w, "%s \n Sucessfully created proj \n ID: %s \n ProjName: %s \n Tasks: %#v \n", insertedID, insertedID, project.ProjName, tasks)
 }
 
 // handleCreateTodo
@@ -221,30 +221,16 @@ func (ts TodoServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
 		Completed:   todo.Completed,
 		Updated_at:  &bson.Timestamp{T: uint32(time.Now().Unix())},
 	}
-	updateResult, err := ts.TodoStore.CreateTodo(projID, newTodoWithoutID)
+	upsertedID, err := ts.TodoStore.CreateTodo(projID, newTodoWithoutID)
 	if err != nil {
 		log.Println("failed to create todo on data store: ", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
-	if updateResult.MatchedCount != 1 {
-		log.Println("data store did not match query, updateResult.MatchedCount: ", updateResult.MatchedCount)
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "we could not find the project, thus was unable to create a new todo")
-		return
-	}
-	/*
-		if updateResult.UpsertedCount != 1 {
-			log.Println("data store could not upsert todo: ", err.Error())
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "something went wrong on our end, please try again later.")
-			return
-		}
-	*/
+
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "%s\n Successfully created todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s \n Priority: %s \n", updateResult.UpsertedID, updateResult.UpsertedID, r.FormValue("Name"), r.FormValue("Description"), r.FormValue("DueDate"), r.FormValue("Priority"))
-	return
+	fmt.Fprintf(w, "%s\n Successfully created todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s \n Priority: %s \n Completed: %t \n", upsertedID, upsertedID, todo.Name, todo.Description, todo.DueDate, todo.Priority, todo.Completed)
 }
 
 // handleUpdateProjNameByID
