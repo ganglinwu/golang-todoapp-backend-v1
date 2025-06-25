@@ -208,8 +208,11 @@ func (ts *TestSuite) TestCreateTodo() {
 		DueDate:     &dueDate1,
 		Priority:    "low",
 	}
-	// somehow todo is inserted but not upserted??!!??
-	// maybe because we manually created ObjectID instead?
+	// Note: on mongostore.go the CreateTodo method generates a new ObjID and injects into the TODO before sending to the database
+	// If we don;t do that, we end up inserting a TODO without objID
+	// Maybe because it is a nested object?
+	// Or could it be a setting we forgot to set?
+	// In any case we will have to insert our own objID for this test to pass the assertions
 	/*
 		updatedResult, err := ts.server.store.CreateTodo(projID, newTodoWithoutID)
 		if err != nil {
@@ -224,6 +227,14 @@ func (ts *TestSuite) TestCreateTodo() {
 
 				newTodoWithoutID.ID = &insertedID
 	*/
+
+	newTodoWithoutID.ID = &objID5
+
+	_, err := ts.server.store.CreateTodo(projID, newTodoWithoutID)
+	if err != nil {
+		ts.FailNowf("err on CreateTodo: ", err.Error())
+	}
+
 	got, err := ts.server.store.GetProjByID(projID)
 	if err != nil {
 		ts.FailNowf("error from GetProjByID", err.Error())

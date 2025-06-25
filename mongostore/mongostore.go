@@ -111,14 +111,12 @@ func (ms *MongoStore) GetAllTodos() ([]models.TODO, error) {
 	}
 	todos := []models.TODO{}
 	for i := range projs {
-		for _, todo := range projs[i].Tasks {
-			todos = append(todos, todo)
-		}
+		todos = append(todos, projs[i].Tasks...)
 	}
 	return todos, nil
 }
 
-func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (*mongo.UpdateResult, error) {
+func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (interface{}, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -132,19 +130,26 @@ func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (*
 	// generate new ObjectID for created todo
 	todoID := bson.NewObjectID()
 
+	upsertedID := ""
+
 	// add ID onto newTodoWithoutID
-	newTodoWithoutID.ID = &todoID
+	if newTodoWithoutID.ID == nil {
+		newTodoWithoutID.ID = &todoID
+		upsertedID = todoID.Hex()
+	} else {
+		upsertedID = newTodoWithoutID.ID.Hex()
+	}
 
 	update := bson.D{{Key: "$push", Value: bson.D{{Key: "tasks", Value: newTodoWithoutID}}}}
 
 	opts := options.UpdateOne().SetUpsert(true)
 
-	result, err := ms.Collection.UpdateOne(ctx, query, update, opts)
+	_, err = ms.Collection.UpdateOne(ctx, query, update, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	return result, nil
+	return upsertedID, nil
 }
 
 func (ms *MongoStore) CreateProj(ProjName string, Tasks []models.TODO) (string, error) {

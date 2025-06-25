@@ -18,7 +18,7 @@ type TodoStore interface {
 	GetAllTodos() ([]models.TODO, error)
 	GetProjByID(ID string) (models.PROJECT, error)
 	CreateProj(Name string, Tasks []models.TODO) (string, error)
-	CreateTodo(projID string, newTodoWithoutID models.TODO) (*mongo.UpdateResult, error)
+	CreateTodo(projID string, newTodoWithoutID models.TODO) (interface{}, error)
 	UpdateProjNameByID(ID, newName string) error
 	UpdateTodoByID(todoID string, newTodoWithoutID models.TODO) error
 	DeleteProjByID(ID string) (*mongo.DeleteResult, error)
