@@ -26,7 +26,7 @@ func NewConnection() (*mongo.Client, error) {
 		return nil, err
 	}
 
-	connString, exist := os.LookupEnv("CONNECTION_STRING")
+	connString, exist := os.LookupEnv("MONGO_CONNECTION_STRING")
 	if !exist {
 		return nil, errs.ErrEnvVarNotFound
 	}
@@ -127,7 +127,7 @@ func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (*
 		return nil, err
 	}
 
-	query := bson.D{{"_id", &objID}}
+	query := bson.D{{Key: "_id", Value: &objID}}
 
 	// generate new ObjectID for created todo
 	todoID := bson.NewObjectID()
@@ -135,7 +135,7 @@ func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (*
 	// add ID onto newTodoWithoutID
 	newTodoWithoutID.ID = &todoID
 
-	update := bson.D{{Key: "$push", Value: bson.D{{"tasks", newTodoWithoutID}}}}
+	update := bson.D{{Key: "$push", Value: bson.D{{Key: "tasks", Value: newTodoWithoutID}}}}
 
 	opts := options.UpdateOne().SetUpsert(true)
 
@@ -147,7 +147,7 @@ func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (*
 	return result, nil
 }
 
-func (ms *MongoStore) CreateProj(ProjName string, Tasks []models.TODO) (*bson.ObjectID, error) {
+func (ms *MongoStore) CreateProj(ProjName string, Tasks []models.TODO) (string, error) {
 	// TODO: check if duplicate proj exists
 	proj := models.PROJECT{ProjName: ProjName, Tasks: Tasks}
 
@@ -156,12 +156,13 @@ func (ms *MongoStore) CreateProj(ProjName string, Tasks []models.TODO) (*bson.Ob
 
 	result, err := ms.Collection.InsertOne(ctx, proj)
 	if err != nil {
-		return &bson.ObjectID{}, err
+		return "", err
 	}
 
 	objID := result.InsertedID.(bson.ObjectID)
+	IDstr := objID.Hex()
 
-	return &objID, nil
+	return IDstr, nil
 }
 
 func (ms *MongoStore) UpdateTodoByID(ID string, newTodoWithoutID models.TODO) error {

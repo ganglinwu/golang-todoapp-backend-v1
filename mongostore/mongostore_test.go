@@ -176,12 +176,17 @@ func (ts *TestSuite) TestCreateProj() {
 		ts.FailNowf("err on CreateProj: ", err.Error())
 	}
 
-	got, err := ts.server.store.GetProjByID(insertedID.Hex())
+	objID, err := bson.ObjectIDFromHex(insertedID)
 	if err != nil {
-		ts.FailNowf("failed to convert bson.ObjectID to Hex string:", err.Error())
+		ts.FailNowf("failed to convert to bson.ObjectID from Hex string:", err.Error())
 	}
 
-	want := models.PROJECT{ID: insertedID, ProjName: name, Tasks: []models.TODO{}}
+	got, err := ts.server.store.GetProjByID(insertedID)
+	if err != nil {
+		ts.FailNowf("failed to GetProjByID:", err.Error())
+	}
+
+	want := models.PROJECT{ID: &objID, ProjName: name, Tasks: []models.TODO{}}
 
 	ts.compareProjStructFields(want, got)
 }
