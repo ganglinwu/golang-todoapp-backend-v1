@@ -238,13 +238,13 @@ func (ms *MongoStore) DeleteProjByID(ID string) (int, error) {
 	return int(dr.DeletedCount), nil
 }
 
-func (ms *MongoStore) DeleteTodoByID(TodoID string) (*mongo.UpdateResult, error) {
+func (ms *MongoStore) DeleteTodoByID(TodoID string) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	todoID, err := bson.ObjectIDFromHex(TodoID)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	query := bson.D{{Key: "tasks._id", Value: &todoID}}
@@ -253,9 +253,12 @@ func (ms *MongoStore) DeleteTodoByID(TodoID string) (*mongo.UpdateResult, error)
 
 	updateResult, err := ms.Collection.UpdateOne(ctx, query, update)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return updateResult, nil
+
+	deletedCount := updateResult.ModifiedCount
+
+	return int(deletedCount), nil
 }
 
 func (ms *MongoStore) GetTodoByID(TodoID string) (models.TODO, error) {

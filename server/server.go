@@ -10,7 +10,6 @@ import (
 	"github.com/ganglinwu/todoapp-backend-v1/errs"
 	"github.com/ganglinwu/todoapp-backend-v1/models"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // TODO: CreateProj returns string while CreateTodo returns interface{}/int
@@ -24,7 +23,7 @@ type TodoStore interface {
 	UpdateProjNameByID(ID, newName string) error
 	UpdateTodoByID(todoID string, newTodoWithoutID models.TODO) error
 	DeleteProjByID(ID string) (int, error)
-	DeleteTodoByID(todoID string) (*mongo.UpdateResult, error)
+	DeleteTodoByID(todoID string) (int, error)
 	GetTodoByID(todoID string) (models.TODO, error)
 }
 
@@ -371,7 +370,7 @@ func (ts TodoServer) handleDeleteProjByID(w http.ResponseWriter, r *http.Request
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "%d", deletedCount)
+	fmt.Fprintf(w, "Number of projects deleted: %d", deletedCount)
 }
 
 // handleDeleteTodoByID
@@ -381,21 +380,17 @@ func (ts TodoServer) handleDeleteTodoByID(w http.ResponseWriter, r *http.Request
 	enableCors(&w)
 	todoID := r.PathValue("ID")
 
-	updateResult, err := ts.TodoStore.DeleteTodoByID(todoID)
+	deletedCount, err := ts.TodoStore.DeleteTodoByID(todoID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
-	if updateResult.MatchedCount != 1 {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "the project/todo could not be found")
-		return
-	}
-	if updateResult.ModifiedCount != 1 {
+	if deletedCount != 1 {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "we could not delete the todo. something went wrong on our end.")
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Number of todos deleted: %d", deletedCount)
 }

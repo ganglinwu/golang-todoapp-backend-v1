@@ -16,7 +16,6 @@ import (
 	"github.com/ganglinwu/todoapp-backend-v1/models"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // initialize test suite struct
@@ -168,19 +167,19 @@ func (s *StubTodoStore) DeleteProjByID(ID string) (int, error) {
 	return 0, errs.ErrNotFound
 }
 
-func (s *StubTodoStore) DeleteTodoByID(todoID string) (*mongo.UpdateResult, error) {
+func (s *StubTodoStore) DeleteTodoByID(todoID string) (int, error) {
 	if len(s.store) == 0 {
-		return &mongo.UpdateResult{MatchedCount: 0, ModifiedCount: 0, UpsertedCount: 0}, errs.ErrNotFound
+		return 0, errs.ErrNotFound
 	}
 	for projIndex, proj := range s.store {
 		for taskIndex, task := range proj.Tasks {
 			if task.ID.Hex() == todoID {
 				s.store[projIndex].Tasks = slices.Delete(s.store[projIndex].Tasks, taskIndex, taskIndex+1)
-				return &mongo.UpdateResult{MatchedCount: 1, ModifiedCount: 1, UpsertedCount: 0}, nil
+				return 1, nil
 			}
 		}
 	}
-	return &mongo.UpdateResult{MatchedCount: 0, ModifiedCount: 0, UpsertedCount: 0}, errs.ErrNotFound
+	return 0, errs.ErrNotFound
 }
 
 func (s *StubTodoStore) GetTodoByID(todoID string) (models.TODO, error) {
@@ -489,7 +488,7 @@ func (ts *TestSuite) TestUpdateTodoByID() {
 }
 
 func (ts *TestSuite) TestDeleteProjByID() {
-	request, _ := http.NewRequest(http.MethodDelete, "/proj/68299585e7b6718ddf79b567", nil)
+	request, _ := http.NewRequest(http.MethodDelete, "/proj/682571d1dafbee2eecbf4913", nil)
 	responseRecorder := httptest.NewRecorder()
 
 	ts.server.ServeHTTP(responseRecorder, request)
@@ -505,13 +504,29 @@ func (ts *TestSuite) TestDeleteProjByID() {
 	defer response.Body.Close()
 	got := string(byteGot)
 
-	ts.assertTodoText("1", got)
+	ts.assertTodoText("Number of projects deleted: 1", got)
 	ts.assertStatusCode(200, responseRecorder.Code)
 }
 
 func (ts *TestSuite) TestDeleteTodoByID() {
-	// reset seeded data
-	ts.SetupTest()
+	request, _ := http.NewRequest(http.MethodDelete, "/todo/67bc5c4f1e8db0c9a17efca0", nil)
+	responseRecorder := httptest.NewRecorder()
+
+	ts.server.ServeHTTP(responseRecorder, request)
+	response := responseRecorder.Result()
+
+	byteGot, err := io.ReadAll(response.Body)
+	if err != nil {
+		if err != io.EOF {
+			ts.FailNow(err.Error())
+		}
+	}
+
+	defer response.Body.Close()
+	got := string(byteGot)
+
+	ts.assertTodoText("Number of todos deleted: 1", got)
+	ts.assertStatusCode(200, responseRecorder.Code)
 }
 
 /*

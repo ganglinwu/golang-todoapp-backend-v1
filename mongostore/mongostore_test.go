@@ -302,19 +302,19 @@ func (ts *TestSuite) TestDeleteProjByID() {
 		ts.FailNowf("err on DeleteProjByID: ", err.Error())
 	}
 	got := deletedCount
-	want := int64(1)
+	want := int(1)
 
 	ts.Equal(want, got)
 }
 
 func (ts *TestSuite) TestDeleteTodoByID() {
 	todoID := "682996bc78d219298228c10a"
-	updatedResult, err := ts.server.store.DeleteTodoByID(todoID)
+	deletedCount, err := ts.server.store.DeleteTodoByID(todoID)
 	if err != nil {
 		ts.FailNowf("err on DeleteTodoByID: ", err.Error())
 	}
-	got := updatedResult.ModifiedCount
-	want := int64(1)
+	got := int(deletedCount)
+	want := int(1)
 
 	ts.Equal(want, got)
 }
