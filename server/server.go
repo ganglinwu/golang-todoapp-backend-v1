@@ -50,7 +50,6 @@ func handlePreFlight(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Content-Type, Authorization, X-Requested-With")
 		return
 	}
-	return
 }
 
 func NewTodoServer(store TodoStore) *TodoServer {

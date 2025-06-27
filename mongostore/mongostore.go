@@ -179,13 +179,13 @@ func (ms *MongoStore) UpdateTodoByID(ID string, newTodoWithoutID models.TODO) er
 		return err
 	}
 
-	query := bson.D{{"tasks._id", &objID}}
+	query := bson.D{{Key: "tasks._id", Value: &objID}}
 
 	// we need to add in ID
 	// else we will be updating with an object without ID!
 	newTodoWithoutID.ID = &objID
 
-	update := bson.D{{Key: "$set", Value: bson.D{{"tasks.$", newTodoWithoutID}}}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "tasks.$", Value: newTodoWithoutID}}}}
 
 	result, err := ms.Collection.UpdateOne(ctx, query, update)
 	if err != nil {
@@ -203,10 +203,13 @@ func (ms *MongoStore) UpdateProjNameByID(ID, newProjName string) error {
 	defer cancel()
 
 	projID, err := bson.ObjectIDFromHex(ID)
+	if err != nil {
+		return err
+	}
 
-	query := bson.D{{"_id", &projID}}
+	query := bson.D{{Key: "_id", Value: &projID}}
 
-	update := bson.D{{"$set", bson.D{{"projname", newProjName}}}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "projname", Value: newProjName}}}}
 
 	result, err := ms.Collection.UpdateOne(ctx, query, update)
 	if err != nil {
@@ -244,9 +247,9 @@ func (ms *MongoStore) DeleteTodoByID(TodoID string) (*mongo.UpdateResult, error)
 		return nil, err
 	}
 
-	query := bson.D{{"tasks._id", &todoID}}
+	query := bson.D{{Key: "tasks._id", Value: &todoID}}
 
-	update := bson.D{{"$pull", bson.D{{"tasks", bson.D{{"_id", &todoID}}}}}}
+	update := bson.D{{Key: "$pull", Value: bson.D{{Key: "tasks", Value: bson.D{{Key: "_id", Value: &todoID}}}}}}
 
 	updateResult, err := ms.Collection.UpdateOne(ctx, query, update)
 	if err != nil {
@@ -266,7 +269,7 @@ func (ms *MongoStore) GetTodoByID(TodoID string) (models.TODO, error) {
 
 	projThatContainsTodo := models.PROJECT{}
 
-	query := bson.D{{"tasks._id", &todoID}}
+	query := bson.D{{Key: "tasks._id", Value: &todoID}}
 
 	err = ms.Collection.FindOne(ctx, query).Decode(&projThatContainsTodo)
 	if err != nil {
