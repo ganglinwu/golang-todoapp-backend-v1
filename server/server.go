@@ -13,12 +13,14 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
+// TODO: CreateProj returns string while CreateTodo returns interface{}/int
+// probably better to standardise what we want to return for both Create methods
 type TodoStore interface {
 	GetAllProjs() ([]models.PROJECT, error)
 	GetAllTodos() ([]models.TODO, error)
 	GetProjByID(ID string) (models.PROJECT, error)
 	CreateProj(Name string, Tasks []models.TODO) (string, error)
-	CreateTodo(projID string, newTodoWithoutID models.TODO) (interface{}, error)
+	CreateTodo(projID string, newTodoWithoutID models.TODO) (string, error)
 	UpdateProjNameByID(ID, newName string) error
 	UpdateTodoByID(todoID string, newTodoWithoutID models.TODO) error
 	DeleteProjByID(ID string) (*mongo.DeleteResult, error)

@@ -116,13 +116,13 @@ func (ms *MongoStore) GetAllTodos() ([]models.TODO, error) {
 	return todos, nil
 }
 
-func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (interface{}, error) {
+func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	objID, err := bson.ObjectIDFromHex(projID)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	query := bson.D{{Key: "_id", Value: &objID}}
@@ -146,7 +146,7 @@ func (ms *MongoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (i
 
 	_, err = ms.Collection.UpdateOne(ctx, query, update, opts)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	return upsertedID, nil

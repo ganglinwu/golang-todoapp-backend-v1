@@ -121,9 +121,9 @@ func (s *StubTodoStore) CreateProj(Name string, Tasks []models.TODO) (string, er
 	return IDstr, nil
 }
 
-func (s *StubTodoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (interface{}, error) {
+func (s *StubTodoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) (string, error) {
 	if len(s.store) == 0 {
-		return nil, errs.ErrNotFound
+		return "", errs.ErrNotFound
 	}
 	for projIndex, proj := range s.store {
 		if proj.ID.Hex() == projID {
@@ -139,7 +139,7 @@ func (s *StubTodoStore) CreateTodo(projID string, newTodoWithoutID models.TODO) 
 			return upsertedID, nil
 		}
 	}
-	return nil, errs.ErrNotFound
+	return "", errs.ErrNotFound
 }
 
 func (s *StubTodoStore) UpdateProjNameByID(ID, NewName string) error {
