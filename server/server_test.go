@@ -155,17 +155,17 @@ func (s *StubTodoStore) UpdateProjNameByID(ID, NewName string) error {
 	return nil
 }
 
-func (s *StubTodoStore) DeleteProjByID(ID string) (*mongo.DeleteResult, error) {
+func (s *StubTodoStore) DeleteProjByID(ID string) (int, error) {
 	if len(s.store) == 0 {
-		return &mongo.DeleteResult{DeletedCount: 0}, errs.ErrNotFound
+		return 0, errs.ErrNotFound
 	}
 	for i, proj := range s.store {
 		if proj.ID.Hex() == ID {
 			s.store = slices.Delete(s.store, i, i+1)
-			return &mongo.DeleteResult{DeletedCount: 1}, nil
+			return 1, nil
 		}
 	}
-	return &mongo.DeleteResult{DeletedCount: 0}, errs.ErrNotFound
+	return 0, errs.ErrNotFound
 }
 
 func (s *StubTodoStore) DeleteTodoByID(todoID string) (*mongo.UpdateResult, error) {

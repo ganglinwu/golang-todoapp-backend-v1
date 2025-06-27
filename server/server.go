@@ -23,7 +23,7 @@ type TodoStore interface {
 	CreateTodo(projID string, newTodoWithoutID models.TODO) (string, error)
 	UpdateProjNameByID(ID, newName string) error
 	UpdateTodoByID(todoID string, newTodoWithoutID models.TODO) error
-	DeleteProjByID(ID string) (*mongo.DeleteResult, error)
+	DeleteProjByID(ID string) (int, error)
 	DeleteTodoByID(todoID string) (*mongo.UpdateResult, error)
 	GetTodoByID(todoID string) (models.TODO, error)
 }
@@ -264,7 +264,6 @@ func (ts TodoServer) handleUpdateProjNameByID(w http.ResponseWriter, r *http.Req
 	log.Printf("Sucessfully updated proj name \n ID: %s \n ProjName: %s \n", ID, newProjName)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "\n Sucessfully updated proj name \n ID: %s \n ProjName: %s \n", ID, newProjName)
-	return
 }
 
 // handleUpdateTodoByID
@@ -293,6 +292,12 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 	todoID := r.PathValue("ID")
 
 	currentTodo, err := ts.TodoStore.GetTodoByID(todoID)
+	if err != nil {
+		log.Println("failed to GetTodoByID: ", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return
+	}
 
 	// check and update
 
@@ -351,7 +356,6 @@ func (ts TodoServer) handleUpdateTodoByID(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 	log.Printf("Sucessfully updated todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s \n Priority: %s \n Completed: %t \n", todoID, updatedTodoWithoutID.Name, updatedTodoWithoutID.Description, r.FormValue("DueDate"), updatedTodoWithoutID.Priority, updatedTodoWithoutID.Completed)
 	fmt.Fprintf(w, "\n Sucessfully updated todo \n ID: %s \n Name: %s \n Description: %s \n DueDate: %s \n Priority: %s \n Completed %t \n", todoID, updatedTodoWithoutID.Name, updatedTodoWithoutID.Description, r.FormValue("DueDate"), updatedTodoWithoutID.Priority, updatedTodoWithoutID.Completed)
-	return
 }
 
 // handleDeleteProjByID
@@ -361,15 +365,14 @@ func (ts TodoServer) handleDeleteProjByID(w http.ResponseWriter, r *http.Request
 	enableCors(&w)
 	ID := r.PathValue("ID")
 
-	deleteResult, err := ts.TodoStore.DeleteProjByID(ID)
+	deletedCount, err := ts.TodoStore.DeleteProjByID(ID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "%d", deleteResult.DeletedCount)
-	return
+	fmt.Fprintf(w, "%d", deletedCount)
 }
 
 // handleDeleteTodoByID
@@ -396,5 +399,4 @@ func (ts TodoServer) handleDeleteTodoByID(w http.ResponseWriter, r *http.Request
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	return
 }

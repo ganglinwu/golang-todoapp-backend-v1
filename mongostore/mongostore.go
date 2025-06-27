@@ -219,20 +219,20 @@ func (ms *MongoStore) UpdateProjNameByID(ID, newProjName string) error {
 	return nil
 }
 
-func (ms *MongoStore) DeleteProjByID(ID string) (*mongo.DeleteResult, error) {
+func (ms *MongoStore) DeleteProjByID(ID string) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	objID, err := bson.ObjectIDFromHex(ID)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	dr, err := ms.Collection.DeleteOne(ctx, bson.D{{Key: "_id", Value: objID}})
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return dr, nil
+	return int(dr.DeletedCount), nil
 }
 
 func (ms *MongoStore) DeleteTodoByID(TodoID string) (*mongo.UpdateResult, error) {
