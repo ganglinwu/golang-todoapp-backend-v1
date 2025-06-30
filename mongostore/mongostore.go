@@ -20,15 +20,18 @@ type MongoStore struct {
 	Collection *mongo.Collection
 }
 
-func NewConnection() (*mongo.Client, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return nil, err
-	}
+func NewConnection(connString *string) (*mongo.Client, error) {
+	if *connString == "" {
+		err := godotenv.Load()
+		if err != nil {
+			return nil, err
+		}
 
-	connString, exist := os.LookupEnv("MONGO_CONNECTION_STRING")
-	if !exist {
-		return nil, errs.ErrEnvVarNotFound
+		mongoDSN, exist := os.LookupEnv("MONGO_CONNECTION_STRING")
+		if !exist {
+			return nil, errs.ErrEnvVarNotFound
+		}
+		*connString = mongoDSN
 	}
 
 	bsonOpts := &options.BSONOptions{
@@ -37,26 +40,33 @@ func NewConnection() (*mongo.Client, error) {
 		UseLocalTimeZone:    true,
 	}
 
-	conn, err := mongo.Connect(options.Client().ApplyURI(connString).SetBSONOptions(bsonOpts))
+	conn, err := mongo.Connect(options.Client().ApplyURI(*connString).SetBSONOptions(bsonOpts))
 	if err != nil {
 		return nil, err
 	}
 	return conn, nil
 }
 
-func GetDBNameCollectionName() (string, string, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return "", "", err
+func GetDBNameCollectionName(dbName, collName *string) (*string, *string, error) {
+	if *dbName == "" {
+		err := godotenv.Load()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		name, exists := os.LookupEnv("DATABASE_NAME")
+		if !exists {
+			return nil, nil, errs.ErrEnvVarNotFound
+		}
+		*dbName = name
 	}
 
-	dbName, exists := os.LookupEnv("DATABASE_NAME")
-	if !exists {
-		return "", "", errs.ErrEnvVarNotFound
-	}
-	collName, exists := os.LookupEnv("COLLECTION_NAME")
-	if !exists {
-		return dbName, "", errs.ErrEnvVarNotFound
+	if *collName == "" {
+		name, exists := os.LookupEnv("COLLECTION_NAME")
+		if !exists {
+			return dbName, nil, errs.ErrEnvVarNotFound
+		}
+		*collName = name
 	}
 	return dbName, collName, nil
 }
