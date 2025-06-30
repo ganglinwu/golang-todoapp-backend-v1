@@ -17,12 +17,12 @@ type PostGresStore struct {
 }
 
 func NewConnection(connString string) (*sql.DB, error) {
-	err := godotenv.Load(".env")
-	if err != nil {
-		return nil, err
-	}
-
 	if connString == "" {
+		err := godotenv.Load(".env")
+		if err != nil {
+			return nil, err
+		}
+
 		connStringEnv, exist := os.LookupEnv("POSTGRES_CONNECTION_STRING")
 		if !exist {
 			return nil, errs.ErrEnvVarNotFound
